@@ -1,5 +1,3 @@
 {
-  "textures": {
-    "TOP": "diamond_block/side.png"
-  }
+  "allTexture": "diamond_block.png"
 }

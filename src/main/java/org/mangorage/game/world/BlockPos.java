@@ -1,4 +1,3 @@
 package org.mangorage.game.world;
 
-public class BlockPo {
-}
+public record BlockPos(int x, int y, int z) { }

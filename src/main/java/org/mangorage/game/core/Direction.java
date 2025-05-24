@@ -1,4 +1,6 @@
-package org.mangorage.game.world;
+package org.mangorage.game.core;
+
+import org.mangorage.game.world.BlockPos;
 
 public enum Direction {
     UP(0, 1, 0, 4),
@@ -23,5 +25,16 @@ public enum Direction {
 
     public BlockPos offset(BlockPos pos) {
         return new BlockPos(pos.x() + x, pos.y() + y, pos.z() + z);
+    }
+
+    public Direction getOpposite() {
+        return switch (this) {
+            case NORTH -> SOUTH;
+            case SOUTH -> NORTH;
+            case EAST -> WEST;
+            case WEST -> EAST;
+            case UP -> DOWN;
+            case DOWN -> UP;
+        };
     }
 }

@@ -1,7 +1,7 @@
-package org.mangorage.game.core.data;
+package org.mangorage.game.core.data.blockinfo;
 
 import com.google.gson.Gson;
-import org.mangorage.game.core.Side;
+import org.mangorage.game.core.Direction;
 
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -27,9 +27,9 @@ public sealed class BlockInfo permits MissingBlockInfo {
     }
 
     private final String allTexture = null;
-    private final Map<Side, String> textures = new HashMap<>();
+    private final Map<Direction, String> textures = new HashMap<>();
 
-    public String getTexture(Side side) {
+    public String getTexture(Direction side) {
         if (allTexture != null)
             return "assets/textures/blocks/" + allTexture;
         if (textures.containsKey(side))

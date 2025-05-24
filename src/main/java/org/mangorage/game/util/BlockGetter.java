@@ -1,4 +1,8 @@
 package org.mangorage.game.util;
 
-public class BlockGetter {
+import org.mangorage.game.block.Block;
+
+@FunctionalInterface
+public interface BlockGetter {
+    Block getBlock(int x, int y, int z);
 }

@@ -7,14 +7,13 @@ import org.lwjgl.glfw.GLFWKeyCallback;
 import org.lwjgl.opengl.GL;
 import org.mangorage.game.core.Blocks;
 import org.mangorage.game.renderer.CubeRenderer;
-import org.mangorage.game.world.BlockPos;
 import org.mangorage.game.world.WorldInstance;
 
 import static org.lwjgl.glfw.GLFW.*;
 import static org.lwjgl.opengl.GL11.*;
 import static org.lwjgl.system.MemoryUtil.NULL;
 
-public final class Test {
+public final class Game {
 
     private final WorldInstance worldInstance = new WorldInstance();
 
@@ -39,7 +38,7 @@ public final class Test {
     private final boolean[] keys = new boolean[1024];
 
     public static void main(String[] args) {
-        new Test().run();
+        new Game().run();
     }
 
     public void run() {
@@ -90,10 +89,12 @@ public final class Test {
         glEnable(GL_DEPTH_TEST);
         glClearColor(0.2f, 0.3f, 0.3f, 1f);
 
+        glEnable(GL_BLEND);
+        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
         Blocks.init();
 
-        final var blocks = CubeRenderer.makeTestBlockArray(2, 2, 2, (x, y, z) -> {
+        final var blocks = CubeRenderer.makeTestBlockArray(128, 2, 128, (x, y, z) -> {
             if (y == 1)
                 return Blocks.GRASS_BLOCK;
             return Blocks.DIAMOND_BLOCK;
