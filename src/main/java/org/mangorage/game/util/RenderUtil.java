@@ -1,5 +1,7 @@
 package org.mangorage.game.util;
 
+import org.mangorage.game.core.Direction;
+
 public final class RenderUtil {
     public static float[] rotateUVs(float[] originalUVs, int rotationDegrees) {
         // rotationDegrees must be one of {0, 90, 180, 270}
@@ -45,5 +47,19 @@ public final class RenderUtil {
             rotatedUVs[i*2 + 1] = uvPoints[i][1];
         }
         return rotatedUVs;
+    }
+
+    public static float[] adjustForBrightness(float[] tint, Direction dir) {
+        float brightness = switch (dir) {
+            case UP    -> 1.0f;
+            case DOWN  -> 0.5f;
+            default    -> 0.7f;
+        };
+
+        float[] adjusted = new float[tint.length];
+        for (int i = 0; i < tint.length; i++) {
+            adjusted[i] = tint[i] * brightness;
+        }
+        return adjusted;
     }
 }

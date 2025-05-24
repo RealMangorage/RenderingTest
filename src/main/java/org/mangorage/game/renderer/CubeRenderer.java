@@ -116,14 +116,14 @@ public final class CubeRenderer {
 
                                 if (currentBlock != Blocks.GRASS_BLOCK) {
                                     int textureId = getOrCreateTexture(currentBlock.getBlockInfo().getTexture(dir));
-                                    float[] tint = currentBlock.getTint(dir);
+                                    float[] tint = currentBlock.getTint(dir, 1);
                                     drawCommands.add(new DrawCommand(textureId, currentVertexOffset, addedVertices, tint, state -> {}));
                                 }
 
 
                                 if (currentBlock == Blocks.GRASS_BLOCK) {
 
-                                    float[] tint = currentBlock.getTint(dir);
+                                    float[] tint = currentBlock.getTint(dir, 1);
 
                                     int textureId = getOrCreateTexture(currentBlock.getBlockInfo().getTexture(dir));
                                     drawCommands.add(new DrawCommand(textureId, currentVertexOffset, addedVertices, tint, state -> {}));
@@ -132,7 +132,7 @@ public final class CubeRenderer {
                                     int textureIdOverlay = getOrCreateTexture("assets/textures/blocks/grass_block_side_overlay.png");
 
                                     if (dir != Direction.UP && dir != Direction.DOWN) {
-                                        drawCommands.add(new DrawCommand(textureIdOverlay, currentVertexOffset, addedVertices, currentBlock.getTint(Direction.UP), state -> {
+                                        drawCommands.add(new DrawCommand(textureIdOverlay, currentVertexOffset, addedVertices, currentBlock.getTint(dir, 2), state -> {
                                             if (state) {
                                                 glEnable(GL_BLEND);
                                                 glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);

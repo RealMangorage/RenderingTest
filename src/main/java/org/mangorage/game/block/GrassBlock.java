@@ -1,6 +1,7 @@
 package org.mangorage.game.block;
 
 import org.mangorage.game.core.Direction;
+import org.mangorage.game.util.RenderUtil;
 
 public final class GrassBlock extends Block {
 
@@ -11,10 +12,12 @@ public final class GrassBlock extends Block {
     }
 
     @Override
-    public float[] getTint(Direction face) {
-        if (face == Direction.UP) {
-            return TINT_TOP;
+    public float[] getTint(Direction face, int layer) {
+        if (face != Direction.DOWN && layer != 1) {
+            return RenderUtil.adjustForBrightness(TINT_TOP, face);
+        } else if (face == Direction.UP) {
+            return RenderUtil.adjustForBrightness(TINT_TOP, face);
         }
-        return null;
+        return super.getTint(face, layer);
     }
 }
