@@ -6,8 +6,12 @@ import org.lwjgl.glfw.GLFWCursorPosCallback;
 import org.lwjgl.glfw.GLFWKeyCallback;
 import org.lwjgl.opengl.GL;
 import org.mangorage.game.core.Blocks;
-import org.mangorage.game.renderer.CubeRenderer;
+import org.mangorage.game.core.Direction;
+import org.mangorage.game.renderer.BlockOutlineRenderer;
+import org.mangorage.game.util.Cooldown;
+import org.mangorage.game.world.BlockPos;
 import org.mangorage.game.world.WorldInstance;
+
 
 import static org.lwjgl.glfw.GLFW.*;
 import static org.lwjgl.opengl.GL11.*;
@@ -15,7 +19,8 @@ import static org.lwjgl.system.MemoryUtil.NULL;
 
 public final class Game {
 
-    private final WorldInstance worldInstance = new WorldInstance();
+    private WorldInstance worldInstance;
+    private BlockOutlineRenderer blockOutlineRenderer;
 
     private long window;
 
@@ -36,6 +41,7 @@ public final class Game {
     private float lastFrame = 0.0f;
 
     private final boolean[] keys = new boolean[1024];
+    private BlockPos selected = null;
 
     public static void main(String[] args) {
         new Game().run();
@@ -45,7 +51,6 @@ public final class Game {
         // Setup error callback for debugging
         glfwSetErrorCallback((error, description) -> {
             System.err.println("GLFW Error " + error + ": " + nglfwGetError(description));
-            //            textures[i] = loadTextureFromResource("assets/textures/blocks/diamond_block/side.png");
         });
 
         init();
@@ -94,13 +99,10 @@ public final class Game {
 
         Blocks.init();
 
-        final var blocks = CubeRenderer.makeTestBlockArray(128, 2, 128, (x, y, z) -> {
-            if (y == 1)
-                return Blocks.GRASS_BLOCK;
-            return Blocks.DIAMOND_BLOCK;
-        });
+        worldInstance = new WorldInstance(16, 16, 16);
+        worldInstance.init();
 
-        Blocks.GRASS_BLOCK.getRenderer().buildMesh(blocks);
+        blockOutlineRenderer = new BlockOutlineRenderer();
     }
 
     private void loop() {
@@ -112,13 +114,19 @@ public final class Game {
             processInput();
 
             // Update view matrix with current camera position and orientation
-            view.identity().lookAt(cameraPos,
-                    new Vector3f(cameraPos).add(cameraFront),
-                    cameraUp);
+            view.identity()
+                    .lookAt(
+                            cameraPos,
+                            new Vector3f(cameraPos).add(cameraFront),
+                            cameraUp
+                    );
 
             glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-            Blocks.DIAMOND_BLOCK.getRenderer().render(new Matrix4f(), view, projection);
+            this.selected = getBlockInView(10);
+            worldInstance.render(view, projection);
+            if (selected != null)
+                blockOutlineRenderer.render(selected.toVector3f(), view, projection);
 
             glfwSwapBuffers(window);
             glfwPollEvents();
@@ -184,6 +192,26 @@ public final class Game {
         cameraFront = front.normalize();
     }
 
+    public BlockPos getBlockInView(float maxDistance) {
+        Vector3f rayOrigin = new Vector3f(cameraPos);
+        Vector3f rayDirection = new Vector3f(cameraFront).normalize();
+
+        Vector3f currentPos = new Vector3f(rayOrigin);
+        for (int i = 0; i < maxDistance * 10; i++) {
+            currentPos.fma(0.1f, rayDirection); // move along the ray in 0.1 increments
+            BlockPos pos = new BlockPos((int)Math.floor(currentPos.x),
+                    (int)Math.floor(currentPos.y),
+                    (int)Math.floor(currentPos.z));
+            if (worldInstance.getBlock(pos) != null) {
+                return pos; // block hit
+            }
+        }
+
+        return null; // nothing hit
+    }
+
+    private final Cooldown actionCooldown = new Cooldown(500);
+
     private void processInput() {
         float cameraSpeed = 2.5f * deltaTime;
         Vector3f right = new Vector3f();
@@ -201,5 +229,18 @@ public final class Game {
         if (keys[GLFW_KEY_D]) {
             cameraPos.add(new Vector3f(right).mul(cameraSpeed));
         }
+        if (keys[GLFW_KEY_G] && worldInstance != null) {
+            worldInstance.setBlock(Blocks.GRASS_BLOCK, new BlockPos(15, 0, 15));
+        }
+        if (keys[GLFW_KEY_F] && selected != null && actionCooldown.consume()) {
+            worldInstance.setBlock(null, selected);
+        }
+        if (keys[GLFW_KEY_H] && selected != null && actionCooldown.consume()) {
+            worldInstance.setBlock(
+                    Blocks.GRASS_BLOCK,
+                    Direction.fromFacingVector(cameraFront).getOpposite().offset(selected)
+            );
+        }
+
     }
 }

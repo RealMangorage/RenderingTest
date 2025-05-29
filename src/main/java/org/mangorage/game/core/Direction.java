@@ -1,5 +1,6 @@
 package org.mangorage.game.core;
 
+import org.joml.Vector3f;
 import org.mangorage.game.world.BlockPos;
 
 public enum Direction {
@@ -36,5 +37,26 @@ public enum Direction {
             case UP -> DOWN;
             case DOWN -> UP;
         };
+    }
+
+    public static Direction fromFacingVector(Vector3f facing) {
+        float x = facing.x;
+        float y = facing.y;
+        float z = facing.z;
+
+        float absX = Math.abs(x);
+        float absY = Math.abs(y);
+        float absZ = Math.abs(z);
+
+        if (absX > absY && absX > absZ) {
+            // Dominant axis is X
+            return x > 0 ? Direction.EAST : Direction.WEST;
+        } else if (absZ > absX && absZ > absY) {
+            // Dominant axis is Z
+            return z > 0 ? Direction.SOUTH : Direction.NORTH;
+        } else {
+            // Dominant axis is Y (looking up or down)
+            return y > 0 ? Direction.UP : Direction.DOWN;
+        }
     }
 }

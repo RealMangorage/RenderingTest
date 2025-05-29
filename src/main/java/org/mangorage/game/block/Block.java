@@ -2,11 +2,9 @@ package org.mangorage.game.block;
 
 import org.mangorage.game.core.Direction;
 import org.mangorage.game.core.data.blockinfo.BlockInfo;
-import org.mangorage.game.renderer.CubeRenderer;
 import org.mangorage.game.util.RenderUtil;
 
 public class Block {
-    private static final CubeRenderer renderer = new CubeRenderer();
     private static final float[] DEFAULT_TINT = new float[]{1f, 1f, 1f};;
 
     // The default cube shape with interleaved position (xyz) and texture coordinates (uv)
@@ -66,10 +64,6 @@ public class Block {
 
     public final BlockInfo getBlockInfo() {
         return info;
-    }
-
-    public final CubeRenderer getRenderer() {
-        return renderer;
     }
 
     public boolean isSolid() {

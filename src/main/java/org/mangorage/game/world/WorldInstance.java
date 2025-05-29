@@ -2,47 +2,66 @@ package org.mangorage.game.world;
 
 import org.joml.Matrix4f;
 import org.mangorage.game.block.Block;
+import org.mangorage.game.core.Blocks;
 import org.mangorage.game.core.Direction;
+import org.mangorage.game.renderer.CubeRenderer;
 
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 
 public final class WorldInstance {
-    private final Map<BlockPos, Block> blocks = new HashMap<>();
-    private final Map<BlockPos, Block> blocks_view = Collections.unmodifiableMap(blocks);
+    private final CubeRenderer renderer = new CubeRenderer();
+    private final int sX, sY, sZ;
+    private final Block[][][] blocks;
+
+    public WorldInstance(int sX, int sY, int sZ) {
+        this.sX = sX;
+        this.sY = sY;
+        this.sZ = sZ;
+        this.blocks = new Block[sX][sY][sZ];
+    }
+
+    boolean isValid(BlockPos blockPos) {
+        return blockPos.x() < sX && blockPos.y() < sY && blockPos.z() < sZ && blockPos.x() >= 0 && blockPos.y() >= 0 && blockPos.z() >= 0;
+    }
 
     public void setBlock(Block block, BlockPos blockPos) {
-        blocks.put(blockPos, block);
+        if (!isValid(blockPos)) return;
+        blocks[blockPos.x()][blockPos.y()][blockPos.z()] = block;
+        renderer.buildMesh(blocks);
     }
 
     public Block getBlock(BlockPos blockPos) {
-        return blocks.get(blockPos);
+        if (!isValid(blockPos)) return null;
+        return blocks[blockPos.x()][blockPos.y()][blockPos.z()];
     }
 
-    public void removeBlock(BlockPos pos) {
-        blocks.remove(pos);
+    public void removeBlock(BlockPos blockPos) {
+        if (!isValid(blockPos)) return;
+        blocks[blockPos.x()][blockPos.y()][blockPos.z()] = null;
     }
 
     public void render(Matrix4f view, Matrix4f projection) {
-        blocks_view.forEach((pos, block) -> {
-            boolean[] visibleFaces = new boolean[6];
-            int facesHidden = 0;
+        renderer.render(new Matrix4f(), view, projection);
+    }
 
-            for (Direction dir : Direction.values()) {
-                BlockPos neighborPos = dir.offset(pos);
-                Block neighbor = getBlock(neighborPos);
+    public void init() {
+        Block diamond = Blocks.DIAMOND_BLOCK;
+        Block grass = Blocks.GRASS_BLOCK;
 
-                visibleFaces[dir.getFaceIndex()] = (neighbor == null || !neighbor.isSolid());
-                if (!visibleFaces[dir.getFaceIndex()]) {
-                    facesHidden++;
+        for (int x = 0; x < sX; x++) {
+            for (int y = 0; y < 2; y++) {
+                for (int z = 0; z < sZ; z++) {
+                    if (y == 1) {
+                        blocks[x][y][z] = grass;
+                    } else {
+                        blocks[x][y][z] = diamond;
+                    }
                 }
             }
+        }
 
-            if (facesHidden != 6) {
-//                Matrix4f model = new Matrix4f().translate(pos.x(), pos.y(), pos.z());
-//                block.getRenderer().render(model, view, projection);
-            }
-        });
+        renderer.buildMesh(blocks);
     }
 }

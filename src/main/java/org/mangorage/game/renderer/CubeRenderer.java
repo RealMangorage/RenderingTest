@@ -4,7 +4,6 @@ import org.joml.Matrix4f;
 import org.lwjgl.BufferUtils;
 import org.lwjgl.system.MemoryStack;
 import org.mangorage.game.block.Block;
-import org.mangorage.game.block.GrassBlock;
 import org.mangorage.game.core.Blocks;
 import org.mangorage.game.core.Direction;
 import org.mangorage.game.util.BlockGetter;
@@ -305,15 +304,6 @@ public final class CubeRenderer {
     }
 
     private record DrawCommand(int textureId, int startIndex, int vertexCount, float[] tint, Consumer<Boolean> extra) {}
-
-    public static Block[][][] makeTestBlockArray(int sx, int sy, int sz, BlockGetter blockGetter) {
-        var blocks = new Block[sx][sy][sz];
-        for (int x = 0; x < sx; x++)
-            for (int y = 0; y < sy; y++)
-                for (int z = 0; z < sz; z++)
-                    blocks[x][y][z] = blockGetter.getBlock(x, y, z);
-        return blocks;
-    }
 
     public void dispose() {
         glDeleteBuffers(vbo);
