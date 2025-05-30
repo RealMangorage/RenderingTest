@@ -29,12 +29,12 @@ public class HudCubeRenderer {
                         0f, 1f, 0f
                 );
 
-        buildSingleCubeMesh();
+        setActiveBlock(Blocks.DIAMOND_BLOCK);
     }
 
-    private void buildSingleCubeMesh() {
+    public void setActiveBlock(Block block) {
         Block[][][] blocks = new Block[1][1][1];
-        blocks[0][0][0] = Blocks.DIAMOND_BLOCK;  // Or any block you want to render
+        blocks[0][0][0] = block;
         cubeRenderer.buildMesh(blocks);
     }
 

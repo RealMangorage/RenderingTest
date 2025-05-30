@@ -3,15 +3,11 @@ package org.mangorage.game.world;
 import org.joml.Matrix4f;
 import org.mangorage.game.block.Block;
 import org.mangorage.game.core.Blocks;
-import org.mangorage.game.core.Direction;
 import org.mangorage.game.renderer.CubeRenderer;
-
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.Map;
+import org.mangorage.game.util.supplier.InitializableSupplier;
 
 public final class WorldInstance {
-    private final CubeRenderer renderer = new CubeRenderer();
+    private final InitializableSupplier<CubeRenderer> cubeRenderer = InitializableSupplier.of(CubeRenderer::new);
     private final int sX, sY, sZ;
     private final Block[][][] blocks;
 
@@ -29,7 +25,7 @@ public final class WorldInstance {
     public void setBlock(Block block, BlockPos blockPos) {
         if (!isValid(blockPos)) return;
         blocks[blockPos.x()][blockPos.y()][blockPos.z()] = block;
-        renderer.buildMesh(blocks);
+        cubeRenderer.get().buildMesh(blocks);
     }
 
     public Block getBlock(BlockPos blockPos) {
@@ -43,10 +39,12 @@ public final class WorldInstance {
     }
 
     public void render(Matrix4f view, Matrix4f projection) {
-        renderer.render(new Matrix4f(), view, projection);
+        cubeRenderer.get().render(new Matrix4f(), view, projection);
     }
 
     public void init() {
+        cubeRenderer.init();
+
         Block diamond = Blocks.DIAMOND_BLOCK;
         Block grass = Blocks.GRASS_BLOCK;
 
@@ -62,6 +60,6 @@ public final class WorldInstance {
             }
         }
 
-        renderer.buildMesh(blocks);
+        cubeRenderer.get().buildMesh(blocks);
     }
 }

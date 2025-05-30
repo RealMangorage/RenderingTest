@@ -5,11 +5,13 @@ import org.joml.Vector3f;
 import org.lwjgl.glfw.GLFWCursorPosCallback;
 import org.lwjgl.glfw.GLFWKeyCallback;
 import org.lwjgl.opengl.GL;
+import org.mangorage.game.block.Block;
 import org.mangorage.game.core.Blocks;
 import org.mangorage.game.core.Direction;
 import org.mangorage.game.renderer.BlockOutlineRenderer;
 import org.mangorage.game.renderer.HudCubeRenderer;
 import org.mangorage.game.util.Cooldown;
+import org.mangorage.game.util.supplier.InitializableSupplier;
 import org.mangorage.game.world.BlockPos;
 import org.mangorage.game.world.WorldInstance;
 
@@ -20,9 +22,16 @@ import static org.lwjgl.system.MemoryUtil.NULL;
 
 public final class Game {
 
-    private WorldInstance worldInstance;
-    private BlockOutlineRenderer blockOutlineRenderer;
-    private HudCubeRenderer hudCubeRenderer;
+    private final WorldInstance worldInstance = new WorldInstance(16, 16, 16);
+    private final InitializableSupplier<BlockOutlineRenderer> blockOutlineRenderer = InitializableSupplier.of(BlockOutlineRenderer::new);
+    private final InitializableSupplier<HudCubeRenderer> hudCubeRenderer = InitializableSupplier.of(() -> new HudCubeRenderer(800, 600));
+
+    private final Block[] blocks_all = new Block[] {
+            Blocks.DIAMOND_BLOCK,
+            Blocks.GRASS_BLOCK
+    };
+
+    private final int selectedBlock = 0;
 
     private long window;
 
@@ -100,13 +109,9 @@ public final class Game {
         glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
         Blocks.init();
-
-        worldInstance = new WorldInstance(16, 16, 16);
         worldInstance.init();
-
-        blockOutlineRenderer = new BlockOutlineRenderer();
-
-        hudCubeRenderer = new HudCubeRenderer(800, 600);
+        blockOutlineRenderer.init();
+        hudCubeRenderer.init();
     }
 
     private void loop() {
@@ -131,11 +136,10 @@ public final class Game {
             worldInstance.render(view, projection);
 
             if (selected != null)
-                blockOutlineRenderer.render(selected.toVector3f(), view, projection);
+                blockOutlineRenderer.get().render(selected.toVector3f(), view, projection);
 
             // In your render loop:
-            hudCubeRenderer.render(20);  // position x=50, y=50, size=40 pixels
-
+            hudCubeRenderer.get().render(20);  // position x=50, y=50, size=40 pixels
 
             glfwSwapBuffers(window);
             glfwPollEvents();
@@ -249,6 +253,9 @@ public final class Game {
                     Blocks.GRASS_BLOCK,
                     Direction.fromFacingVector(cameraFront).getOpposite().offset(selected)
             );
+        }
+        if (keys[GLFW_KEY_M] && actionCooldown.consume()) {
+            hudCubeRenderer.get().setActiveBlock(Blocks.GRASS_BLOCK);
         }
 
     }
