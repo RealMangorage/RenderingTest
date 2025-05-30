@@ -9,26 +9,15 @@ import java.nio.IntBuffer;
 
 import static org.lwjgl.opengl.GL11.*;
 
-public class HudCubeRenderer {
+public final class HudCubeRenderer {
     private final CubeRenderer cubeRenderer;
-    private final Matrix4f projection;
-    private final Matrix4f view;
+    private final Matrix4f projection = new Matrix4f();
+    private final Matrix4f view = new Matrix4f();
 
     public HudCubeRenderer(int windowWidth, int windowHeight) {
         cubeRenderer = new CubeRenderer();
 
-        float aspectRatio = (float) windowWidth / windowHeight;
-        projection = new Matrix4f()
-                .perspective((float) Math.toRadians(45.0), aspectRatio, 0.1f, 100f);
-
-        view = new Matrix4f()
-                .identity()
-                .lookAt(
-                        50f, 50f, 50f,  // Camera waaaaay out there
-                        0f, 0f, 0f,
-                        0f, 1f, 0f
-                );
-
+        setScreenSize(windowWidth, windowHeight);
         setActiveBlock(Blocks.DIAMOND_BLOCK);
     }
 
@@ -65,6 +54,19 @@ public class HudCubeRenderer {
 
     public void dispose() {
         cubeRenderer.dispose();
+    }
+
+    public void setScreenSize(int width, int height) {
+        float aspectRatio = (float) width / height;
+        projection.identity()
+                .perspective((float) Math.toRadians(45.0), aspectRatio, 0.1f, 100f);
+
+        view.identity()
+                .lookAt(
+                        50f, 50f, 50f,
+                        0f, 0f, 0f,
+                        0f, 1f, 0f
+                );
     }
 }
 

@@ -9,6 +9,10 @@ public final class Cooldown {
         this.duration = duration;
     }
 
+    public boolean isActive() {
+        return System.currentTimeMillis() - time < duration;
+    }
+
     public boolean consume() {
         if (System.currentTimeMillis() - time > duration) {
             time = System.currentTimeMillis();
