@@ -70,6 +70,10 @@ public class Block {
         return true;
     }
 
+    public boolean isAir() {
+        return false;
+    }
+
     public float[][][] getShape() {
         return DEFAULT_SHAPE;
     }

@@ -97,14 +97,21 @@ public final class CubeRenderer {
             for (int y = 0; y < height; y++) {
                 for (int z = 0; z < depth; z++) {
                     final var currentBlock = blocks[x][y][z];
-                    if (currentBlock == null) continue;
+                    if (currentBlock == null || currentBlock.isAir()) continue;
 
                     for (Direction dir : Direction.values()) {
                         int nx = x + dir.x;
                         int ny = y + dir.y;
                         int nz = z + dir.z;
 
-                        boolean shouldRenderFace = (nx < 0 || ny < 0 || nz < 0 || nx >= width || ny >= height || nz >= depth) || (blocks[nx][ny][nz] == null);
+                        boolean isInBounds = !(nx < 0 || ny < 0 || nz < 0 || nx >= width || ny >= height || nz >= depth);
+                        boolean shouldRenderFace = !isInBounds && !currentBlock.isAir();
+
+                        if (isInBounds) {
+                            Block neighbor = blocks[nx][ny][nz];
+                            if (neighbor.isAir())
+                                shouldRenderFace = true;
+                        }
 
                         if (shouldRenderFace) {
                             int currentVertexOffset = vertices.size() / 5;

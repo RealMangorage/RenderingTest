@@ -31,7 +31,7 @@ public final class Game {
             Blocks.GRASS_BLOCK
     };
 
-    private final int selectedBlock = 0;
+    private int selectedBlock = 0;
 
     private long window;
 
@@ -109,6 +109,8 @@ public final class Game {
         glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
         Blocks.init();
+
+        // Init all the rendering side things...
         worldInstance.init();
         blockOutlineRenderer.init();
         hudCubeRenderer.init();
@@ -215,7 +217,7 @@ public final class Game {
             BlockPos pos = new BlockPos((int)Math.floor(currentPos.x),
                     (int)Math.floor(currentPos.y),
                     (int)Math.floor(currentPos.z));
-            if (worldInstance.getBlock(pos) != null) {
+            if (!worldInstance.getBlock(pos).isAir()) {
                 return pos; // block hit
             }
         }
@@ -255,7 +257,13 @@ public final class Game {
             );
         }
         if (keys[GLFW_KEY_M] && actionCooldown.consume()) {
-            hudCubeRenderer.get().setActiveBlock(Blocks.GRASS_BLOCK);
+            if (selectedBlock >= blocks_all.length - 1) {
+                selectedBlock = 0;
+            } else {
+                selectedBlock++;
+            }
+
+            hudCubeRenderer.get().setActiveBlock(blocks_all[selectedBlock]);
         }
 
     }

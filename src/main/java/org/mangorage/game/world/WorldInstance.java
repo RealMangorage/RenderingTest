@@ -6,6 +6,8 @@ import org.mangorage.game.core.Blocks;
 import org.mangorage.game.renderer.CubeRenderer;
 import org.mangorage.game.util.supplier.InitializableSupplier;
 
+import java.util.Arrays;
+
 public final class WorldInstance {
     private final InitializableSupplier<CubeRenderer> cubeRenderer = InitializableSupplier.of(CubeRenderer::new);
     private final int sX, sY, sZ;
@@ -16,6 +18,11 @@ public final class WorldInstance {
         this.sY = sY;
         this.sZ = sZ;
         this.blocks = new Block[sX][sY][sZ];
+        for (Block[][] block : blocks) {
+            for (Block[] blocks : block) {
+                Arrays.fill(blocks, Blocks.AIR_BLOCK);
+            }
+        }
     }
 
     boolean isValid(BlockPos blockPos) {
@@ -24,18 +31,13 @@ public final class WorldInstance {
 
     public void setBlock(Block block, BlockPos blockPos) {
         if (!isValid(blockPos)) return;
-        blocks[blockPos.x()][blockPos.y()][blockPos.z()] = block;
+        blocks[blockPos.x()][blockPos.y()][blockPos.z()] = block == null ? Blocks.AIR_BLOCK : block;
         cubeRenderer.get().buildMesh(blocks);
     }
 
     public Block getBlock(BlockPos blockPos) {
-        if (!isValid(blockPos)) return null;
+        if (!isValid(blockPos)) return Blocks.AIR_BLOCK;
         return blocks[blockPos.x()][blockPos.y()][blockPos.z()];
-    }
-
-    public void removeBlock(BlockPos blockPos) {
-        if (!isValid(blockPos)) return;
-        blocks[blockPos.x()][blockPos.y()][blockPos.z()] = null;
     }
 
     public void render(Matrix4f view, Matrix4f projection) {
