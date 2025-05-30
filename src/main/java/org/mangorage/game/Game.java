@@ -8,6 +8,7 @@ import org.lwjgl.opengl.GL;
 import org.mangorage.game.core.Blocks;
 import org.mangorage.game.core.Direction;
 import org.mangorage.game.renderer.BlockOutlineRenderer;
+import org.mangorage.game.renderer.HudCubeRenderer;
 import org.mangorage.game.util.Cooldown;
 import org.mangorage.game.world.BlockPos;
 import org.mangorage.game.world.WorldInstance;
@@ -21,6 +22,7 @@ public final class Game {
 
     private WorldInstance worldInstance;
     private BlockOutlineRenderer blockOutlineRenderer;
+    private HudCubeRenderer hudCubeRenderer;
 
     private long window;
 
@@ -103,6 +105,8 @@ public final class Game {
         worldInstance.init();
 
         blockOutlineRenderer = new BlockOutlineRenderer();
+
+        hudCubeRenderer = new HudCubeRenderer(800, 600);
     }
 
     private void loop() {
@@ -125,8 +129,13 @@ public final class Game {
 
             this.selected = getBlockInView(10);
             worldInstance.render(view, projection);
+
             if (selected != null)
                 blockOutlineRenderer.render(selected.toVector3f(), view, projection);
+
+            // In your render loop:
+            hudCubeRenderer.render(20);  // position x=50, y=50, size=40 pixels
+
 
             glfwSwapBuffers(window);
             glfwPollEvents();
