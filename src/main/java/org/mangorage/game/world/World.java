@@ -10,7 +10,7 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 public final class World {
-    private static final int RENDER_DISTANCE = 2;
+    private static final int RENDER_DISTANCE = 5;
 
     private final Map<ChunkPos, Chunk> chunks = new ConcurrentHashMap<>();
 

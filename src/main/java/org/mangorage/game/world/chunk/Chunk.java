@@ -34,10 +34,7 @@ public final class Chunk {
     }
 
     public void setBlock(Block block, BlockPos blockPos, BlockAction blockAction) { // Needs to be relative here...
-        if (!isValid(blockPos)) {
-            System.out.println("INVALID");
-            return;
-        }
+        if (!isValid(blockPos)) return;
         blocks[blockPos.x()][blockPos.y()][blockPos.z()] = block == null ? Blocks.AIR_BLOCK : block;
         if (blockAction == BlockAction.UPDATE) {
             updateMesh();
@@ -53,12 +50,7 @@ public final class Chunk {
     }
 
     public Block getBlock(BlockPos blockPos) {
-        if (!isValid(blockPos)) {
-            if (blockPos.y() >= 0) {
-                System.out.println("INVALID A");
-            }
-            return Blocks.AIR_BLOCK;
-        }
+        if (!isValid(blockPos)) return Blocks.AIR_BLOCK;
         return blocks[blockPos.x()][blockPos.y()][blockPos.z()];
     }
 

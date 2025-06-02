@@ -17,6 +17,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Consumer;
 
 import static org.lwjgl.opengl.GL11.*;
 import static org.lwjgl.opengl.GL13.*;
@@ -196,52 +197,6 @@ public final class ChunkRenderer {
         return new ChunkMesh(drawCommands);
     }
 
-    public void render(ChunkMesh chunkMesh, Matrix4f model, Matrix4f view, Matrix4f projection) {
-        glUseProgram(shaderProgram);
-
-        try (MemoryStack stack = MemoryStack.stackPush()) {
-            FloatBuffer modelBuf = stack.mallocFloat(16);
-            FloatBuffer viewBuf = stack.mallocFloat(16);
-            FloatBuffer projBuf = stack.mallocFloat(16);
-            model.get(modelBuf);
-            view.get(viewBuf);
-            projection.get(projBuf);
-
-            glUniformMatrix4fv(modelLoc, false, modelBuf);
-            glUniformMatrix4fv(viewLoc, false, viewBuf);
-            glUniformMatrix4fv(projLoc, false, projBuf);
-        }
-
-        glBindVertexArray(vao);
-        glActiveTexture(GL_TEXTURE0);
-        glUniform1i(texUniform, 0);
-
-        final var drawCommands = chunkMesh.drawCommands();
-
-        for (DrawCommand command : drawCommands) {
-            glBindTexture(GL_TEXTURE_2D, command.textureId());
-
-            glUseProgram(shaderProgram);
-
-            command.extra().accept(true);
-
-            int tintLoc = glGetUniformLocation(shaderProgram, "tint");
-
-            final float[] tint = command.tint();
-            if (tint == null) {
-                glUniform3f(tintLoc, 1.0f, 1.0f, 1.0f);  // No tint = white multiplier
-            } else {
-                glUniform3f(tintLoc, tint[0], tint[1], tint[2]);
-            }
-
-            glDrawArrays(GL_TRIANGLES, command.startIndex(), command.vertexCount());
-            command.extra().accept(false);
-        }
-
-        glBindVertexArray(0);
-        glUseProgram(0);
-    }
-
     private void addFaceVertices(List<Float> vertices, int x, int y, int z, Block blockInstance, Direction dir) {
         float[][] face = blockInstance.getShape()[dir.ordinal()];
         float[] texCoords = new float[] { 0,0, 1,0, 1,1, 0,0, 1,1, 0,1 };
@@ -319,6 +274,67 @@ public final class ChunkRenderer {
         if (glGetProgrami(program, GL_LINK_STATUS) == GL_FALSE) {
             throw new RuntimeException("Program link error: " + glGetProgramInfoLog(program));
         }
+    }
+
+    public void render(ChunkMesh chunkMesh, Matrix4f model, Matrix4f view, Matrix4f projection) {
+        glUseProgram(shaderProgram);
+
+        // Upload matrices once
+        try (MemoryStack stack = MemoryStack.stackPush()) {
+            FloatBuffer modelBuf = stack.mallocFloat(16);
+            FloatBuffer viewBuf = stack.mallocFloat(16);
+            FloatBuffer projBuf = stack.mallocFloat(16);
+            model.get(modelBuf);
+            view.get(viewBuf);
+            projection.get(projBuf);
+
+            glUniformMatrix4fv(modelLoc, false, modelBuf);
+            glUniformMatrix4fv(viewLoc, false, viewBuf);
+            glUniformMatrix4fv(projLoc, false, projBuf);
+        }
+
+        glBindVertexArray(vao);
+        glActiveTexture(GL_TEXTURE0);
+        glUniform1i(texUniform, 0);
+
+        // Cache uniform location OUTSIDE the loop
+        int tintLoc = glGetUniformLocation(shaderProgram, "tint");
+
+        // Batch draw commands by texture to avoid excessive binds
+        Map<Integer, List<DrawCommand>> batches = new HashMap<>();
+        for (DrawCommand cmd : chunkMesh.drawCommands()) {
+            batches.computeIfAbsent(cmd.textureId(), k -> new ArrayList<>()).add(cmd);
+        }
+
+        for (Map.Entry<Integer, List<DrawCommand>> batch : batches.entrySet()) {
+            glBindTexture(GL_TEXTURE_2D, batch.getKey());
+
+            Consumer<Boolean> lastExtra = null;
+            for (DrawCommand command : batch.getValue()) {
+                // Only change GL state if needed
+                Consumer<Boolean> extra = command.extra();
+                if (lastExtra != extra) {
+                    if (lastExtra != null) lastExtra.accept(false);
+                    if (extra != null) extra.accept(true);
+                    lastExtra = extra;
+                }
+
+                float[] tint = command.tint();
+                if (tint == null) {
+                    glUniform3f(tintLoc, 1f, 1f, 1f);
+                } else {
+                    glUniform3f(tintLoc, tint[0], tint[1], tint[2]);
+                }
+
+                glDrawArrays(GL_TRIANGLES, command.startIndex(), command.vertexCount());
+            }
+
+            // Reset last extra state
+            if (lastExtra != null) lastExtra.accept(false);
+        }
+
+        glBindVertexArray(0);
+        glUseProgram(0);
     }
 
     public void dispose() {
