@@ -1,8 +1,10 @@
 package org.mangorage.game.block;
 
+import org.mangorage.game.core.BuiltInRegistries;
 import org.mangorage.game.core.Direction;
 import org.mangorage.game.core.data.blockinfo.BlockInfo;
 import org.mangorage.game.util.RenderUtil;
+import org.mangorage.game.util.supplier.InitializableSupplier;
 
 public class Block {
     private static final float[] DEFAULT_TINT = new float[]{1f, 1f, 1f};;
@@ -50,20 +52,18 @@ public class Block {
             },
     };
 
-    private final String name;
-    private final BlockInfo info;
+    private final InitializableSupplier<String> name = InitializableSupplier.ofAuto(() -> BuiltInRegistries.BLOCK_REGISTRY.getId(this));
+    private final InitializableSupplier<BlockInfo> blockInfo = InitializableSupplier.ofAuto(() -> BlockInfo.load(getName()));
 
-    public Block(String name) {
-        this.name = name;
-        this.info = BlockInfo.load(name);
+    public Block() {
     }
 
     public final String getName() {
-        return name;
+        return name.get();
     }
 
     public final BlockInfo getBlockInfo() {
-        return info;
+        return blockInfo.get();
     }
 
     public boolean isSolid() {

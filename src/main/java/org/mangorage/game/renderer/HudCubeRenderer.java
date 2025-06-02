@@ -3,7 +3,7 @@ package org.mangorage.game.renderer;
 import org.joml.Matrix4f;
 import org.lwjgl.BufferUtils;
 import org.mangorage.game.block.Block;
-import org.mangorage.game.core.Blocks;
+import org.mangorage.game.core.BuiltInRegistries;
 import org.mangorage.game.renderer.chunk.ChunkMesh;
 
 import org.mangorage.game.renderer.chunk.ChunkRenderer;
@@ -19,12 +19,12 @@ public final class HudCubeRenderer {
 
     public HudCubeRenderer(int windowWidth, int windowHeight) {
         setScreenSize(windowWidth, windowHeight);
-        setActiveBlock(Blocks.DIAMOND_BLOCK);
+        setActiveBlock(BuiltInRegistries.DIAMOND_BLOCK);
     }
 
     public void setActiveBlock(Block block) {
-        Block[][][] blocks = new Block[1][1][1];
-        blocks[0][0][0] = block;
+        int[][][] blocks = new int[1][1][1];
+        blocks[0][0][0] = BuiltInRegistries.BLOCK_REGISTRY.getInternalId(block);
         final var oldMesh = this.chunkMesh;
         this.chunkMesh = null;
         if (oldMesh != null) {

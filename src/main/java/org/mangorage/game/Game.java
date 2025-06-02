@@ -6,7 +6,7 @@ import org.lwjgl.glfw.GLFWCursorPosCallback;
 import org.lwjgl.glfw.GLFWKeyCallback;
 import org.lwjgl.opengl.GL;
 import org.mangorage.game.block.Block;
-import org.mangorage.game.core.Blocks;
+import org.mangorage.game.core.BuiltInRegistries;
 import org.mangorage.game.core.Direction;
 import org.mangorage.game.core.KeybindRegistry;
 import org.mangorage.game.renderer.BlockOutlineRenderer;
@@ -30,11 +30,6 @@ public final class Game {
     private final InitializableSupplier<HudCubeRenderer> hudCubeRenderer = InitializableSupplier.of(() -> new HudCubeRenderer(800, 600));
 
     private final KeybindRegistry keybindRegistry = new KeybindRegistry();
-
-    private final Block[] blocks_all = new Block[] {
-            Blocks.DIAMOND_BLOCK,
-            Blocks.GRASS_BLOCK
-    };
 
     // Selected block pos/block
     private BlockPos selected = null;
@@ -78,6 +73,8 @@ public final class Game {
         // Destroy callbacks and window properly
         glfwDestroyWindow(window);
         glfwTerminate();
+
+        world.saveAll();
     }
 
 
@@ -125,7 +122,7 @@ public final class Game {
         glEnable(GL_BLEND);
         glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-        Blocks.init();
+        BuiltInRegistries.init();
         TextRenderer.init();
 
         // Init all the rendering side things...
@@ -194,7 +191,7 @@ public final class Game {
                 .append(String.format("FPS: %.0f\n", fps))
                 .append(String.format("Pos: (%.2f, %.2f, %.2f)\n", cameraPos.x, cameraPos.y, cameraPos.z))
                 .append(String.format("Yaw/Pitch: (%.2f, %.2f)\n", yaw, pitch))
-                .append(String.format("Selected Block: %s\n", blocks_all[selectedBlock].getName()));
+                .append(String.format("Selected Block: %s\n", BuiltInRegistries.BLOCK_REGISTRY.getAll().get(selectedBlock).getName()));
 
         if (selected != null) {
             sb
@@ -316,15 +313,6 @@ public final class Game {
             return true;
         }, -1);
 
-        // Place grass block at fixed pos
-        keybindRegistry.register((key, scancode, action, mods) -> {
-            if ((action == GLFW_PRESS || action == GLFW_REPEAT) && key == GLFW_KEY_G) {
-                world.setBlock(Blocks.GRASS_BLOCK, new BlockPos(15, 0, 15), BlockAction.UPDATE);
-                return true;
-            }
-            return false;
-        }, 0);
-
         // Remove selected block
         keybindRegistry.register((key, scancode, action, mods) -> {
             if ((action == GLFW_PRESS || action == GLFW_REPEAT) && key == GLFW_KEY_F) {
@@ -341,7 +329,7 @@ public final class Game {
             if ((action == GLFW_PRESS || action == GLFW_REPEAT) && key == GLFW_KEY_H) {
                 if (selected != null) {
                     world.setBlock(
-                            blocks_all[selectedBlock],
+                            BuiltInRegistries.BLOCK_REGISTRY.getAll().get(selectedBlock),
                             Direction.fromFacingVector(cameraFront).getOpposite().offset(selected),
                             BlockAction.UPDATE
                     );
@@ -354,8 +342,8 @@ public final class Game {
         // Cycle selected block
         keybindRegistry.register((key, scancode, action, mods) -> {
             if ((action == GLFW_PRESS || action == GLFW_REPEAT) && key == GLFW_KEY_M) {
-                selectedBlock = (selectedBlock + 1) % blocks_all.length;
-                hudCubeRenderer.get().setActiveBlock(blocks_all[selectedBlock]);
+                selectedBlock = (selectedBlock + 1) % BuiltInRegistries.BLOCK_REGISTRY.getAll().size();
+                hudCubeRenderer.get().setActiveBlock(BuiltInRegistries.BLOCK_REGISTRY.getAll().get(selectedBlock));
                 return true;
             }
             return false;

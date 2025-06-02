@@ -3,9 +3,21 @@ package org.mangorage.game.world;
 import org.joml.Matrix4f;
 import org.joml.Vector3f;
 import org.mangorage.game.block.Block;
-import org.mangorage.game.core.Blocks;
+import org.mangorage.game.core.BuiltInRegistries;
 import org.mangorage.game.world.chunk.Chunk;
 import org.mangorage.game.world.chunk.ChunkPos;
+
+import java.io.BufferedInputStream;
+import java.io.BufferedOutputStream;
+import java.io.DataInputStream;
+import java.io.DataOutputStream;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -15,7 +27,7 @@ public final class World {
     private final Map<ChunkPos, Chunk> chunks = new ConcurrentHashMap<>();
 
     public Chunk getChunk(ChunkPos chunkPos) {
-        return chunks.computeIfAbsent(chunkPos, this::generateChunk);
+        return chunks.computeIfAbsent(chunkPos, this::loadChunk);
     }
 
     public Chunk getChunk(BlockPos blockPos) {
@@ -37,7 +49,7 @@ public final class World {
 
     public Block getBlock(BlockPos blockPos) {
         Chunk chunk = getChunk(blockPos);
-        if (chunk == null) return Blocks.AIR_BLOCK;
+        if (chunk == null) return BuiltInRegistries.AIR_BLOCK;
         BlockPos localPos = new BlockPos(
                 Math.floorMod(blockPos.x(), 16),
                 blockPos.y(),
@@ -94,6 +106,79 @@ public final class World {
         // Example of extra logic:
         System.out.println("Removing chunk at " + pos);
         chunk.dispose();
+        saveChunk(chunk, pos);
+    }
+
+    public Chunk loadChunk(ChunkPos chunkPos) {
+        Path worldFolder = Path.of("world");
+        if (!Files.exists(worldFolder)) return generateChunk(chunkPos);
+        Path chunkFile = worldFolder.resolve("chk-%s-%s.chk".formatted(chunkPos.x(), chunkPos.z()));
+        if (!Files.exists(chunkFile)) return generateChunk(chunkPos);
+
+        try (DataInputStream in = new DataInputStream(new BufferedInputStream(new FileInputStream(chunkFile.toFile())))) {
+            // Read dimensions
+            int x = in.readInt();
+            int y = in.readInt();
+            int z = in.readInt();
+
+            Chunk chunk = new Chunk(255);
+
+            // Read the data
+            for (int i = 0; i < x; i++) {
+                for (int j = 0; j < y; j++) {
+                    for (int k = 0; k < z; k++) {
+                        chunk.setBlock(
+                                BuiltInRegistries.BLOCK_REGISTRY.getByInternalId(in.readInt()),
+                                new BlockPos(i, j, k),
+                                BlockAction.NONE
+                        );
+                    }
+                }
+            }
+
+            chunk.updateMesh();
+
+            return chunk;
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    public void saveChunk(Chunk chunk, ChunkPos chunkPos) {
+
+        Path worldFolder = Path.of("world");
+        try {
+            if (!Files.exists(worldFolder))
+                Files.createDirectory(worldFolder);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+        Path chunkFile = worldFolder.resolve("chk-%s-%s.chk".formatted(chunkPos.x(), chunkPos.z()));
+
+        try (DataOutputStream out = new DataOutputStream(new BufferedOutputStream(new FileOutputStream(chunkFile.toFile())))) {
+            // Write the two integers
+
+            final var data = chunk.getSaveData();
+            // Write dimensions
+            int x = data.length;
+            int y = data[0].length;
+            int z = data[0][0].length;
+            out.writeInt(x);
+            out.writeInt(y);
+            out.writeInt(z);
+
+            // Write the data
+            for (int[][] slice : data) {
+                for (int[] row : slice) {
+                    for (int val : row) {
+                        out.writeInt(val);
+                    }
+                }
+            }
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
     }
 
     public Chunk generateChunk(ChunkPos chunkPos) {
@@ -103,8 +188,8 @@ public final class World {
             for (int z = 0; z < 16; z++) {
                 for (int y = 0; y < 16; y++) {
                     Block block = (x == 0 || x == 15 || z == 0 || z == 15)
-                            ? Blocks.DIAMOND_BLOCK     // Edge block
-                            : Blocks.GRASS_BLOCK; // Inner block
+                            ? BuiltInRegistries.DIAMOND_BLOCK     // Edge block
+                            : BuiltInRegistries.GRASS_BLOCK; // Inner block
 
                     BlockPos blockPos = new BlockPos(x, y, z);
                     chunk.setBlock(block, blockPos, BlockAction.NONE);
@@ -115,5 +200,9 @@ public final class World {
         chunk.updateMesh();
 
         return chunk;
+    }
+
+    public void saveAll() {
+        chunks.forEach(((chunkPos, chunk) -> saveChunk(chunk, chunkPos)));
     }
 }

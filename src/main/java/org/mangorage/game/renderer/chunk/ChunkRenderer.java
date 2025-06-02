@@ -4,7 +4,7 @@ import org.joml.Matrix4f;
 import org.lwjgl.BufferUtils;
 import org.lwjgl.system.MemoryStack;
 import org.mangorage.game.block.Block;
-import org.mangorage.game.core.Blocks;
+import org.mangorage.game.core.BuiltInRegistries;
 import org.mangorage.game.core.Direction;
 import org.mangorage.game.util.supplier.InitializableSupplier;
 
@@ -98,7 +98,7 @@ public final class ChunkRenderer {
         return textureId;
     }
 
-    public ChunkMesh buildMesh(Block[][][] blocks) {
+    public ChunkMesh buildMesh(int[][][] blocks) {
         List<Float> vertices = new ArrayList<>();
         List<DrawCommand> drawCommands = new ArrayList<>();
 
@@ -109,7 +109,7 @@ public final class ChunkRenderer {
         for (int x = 0; x < width; x++) {
             for (int y = 0; y < height; y++) {
                 for (int z = 0; z < depth; z++) {
-                    Block currentBlock = blocks[x][y][z];
+                    Block currentBlock = BuiltInRegistries.BLOCK_REGISTRY.getByInternalId(blocks[x][y][z]);
                     if (currentBlock == null || currentBlock.isAir()) continue;
 
                     for (Direction dir : Direction.values()) {
@@ -120,7 +120,7 @@ public final class ChunkRenderer {
                         boolean inBounds = nx >= 0 && ny >= 0 && nz >= 0
                                 && nx < width && ny < height && nz < depth;
 
-                        boolean shouldRenderFace = !inBounds || blocks[nx][ny][nz] == null || blocks[nx][ny][nz].isAir();
+                        boolean shouldRenderFace = !inBounds || BuiltInRegistries.BLOCK_REGISTRY.getByInternalId(blocks[nx][ny][nz]).isAir();
 
                         if (shouldRenderFace) {
                             int vertexStart = vertices.size() / 5;
@@ -128,7 +128,7 @@ public final class ChunkRenderer {
                             int addedVerts = (vertices.size() / 5) - vertexStart;
 
                             if (addedVerts > 0) {
-                                if (currentBlock != Blocks.GRASS_BLOCK) {
+                                if (currentBlock != BuiltInRegistries.GRASS_BLOCK) {
                                     int texId = getOrCreateTexture(currentBlock.getBlockInfo().getTexture(dir));
                                     float[] tint = currentBlock.getTint(dir, 1);
                                     drawCommands.add(new DrawCommand(texId, vertexStart, addedVerts, tint, state -> {}));
