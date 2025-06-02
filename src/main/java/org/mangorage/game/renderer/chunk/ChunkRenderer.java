@@ -2,6 +2,8 @@ package org.mangorage.game.renderer.chunk;
 
 import org.joml.Matrix4f;
 import org.lwjgl.BufferUtils;
+import org.lwjgl.opengl.EXTTextureFilterAnisotropic;
+import org.lwjgl.opengl.GL;
 import org.lwjgl.system.MemoryStack;
 import org.mangorage.game.block.Block;
 import org.mangorage.game.core.BuiltInRegistries;
@@ -92,6 +94,11 @@ public final class ChunkRenderer {
 
             glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST_MIPMAP_LINEAR);
             glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+
+            if (GL.getCapabilities().GL_EXT_texture_filter_anisotropic) {
+                float maxAniso = glGetFloat(EXTTextureFilterAnisotropic.GL_MAX_TEXTURE_MAX_ANISOTROPY_EXT);
+                glTexParameterf(GL_TEXTURE_2D, EXTTextureFilterAnisotropic.GL_TEXTURE_MAX_ANISOTROPY_EXT, maxAniso);
+            }
 
             stbi_image_free(image);
         } catch (IOException e) {

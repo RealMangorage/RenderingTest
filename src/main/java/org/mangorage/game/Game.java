@@ -109,10 +109,11 @@ public final class Game {
 
         glfwSetFramebufferSizeCallback(window, (win, width, height) -> {
             glViewport(0, 0, width, height);
+
             windowWidth = width;
             windowHeight = height;
             float aspectN = ((float) width) / height;
-            projection.setPerspective((float) Math.toRadians(45.0f), aspectN, 0.1f, 100f);
+            projection.setPerspective((float) Math.toRadians(45.0f), aspectN, 0.1f, Float.POSITIVE_INFINITY);
             hudCubeRenderer.get().setScreenSize(width, height); // Assuming you have a method like this
         });
 

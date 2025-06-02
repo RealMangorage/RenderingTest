@@ -16,12 +16,15 @@ public final class HudCubeRenderer {
     private final Matrix4f projection = new Matrix4f();
     private final Matrix4f view = new Matrix4f();
     private volatile ChunkMesh chunkMesh = null;
-    private IntBuffer viewport = BufferUtils.createIntBuffer(4);
+    private final IntBuffer viewport = BufferUtils.createIntBuffer(4);
 
     public HudCubeRenderer(int windowWidth, int windowHeight) {
         setScreenSize(windowWidth, windowHeight);
         setActiveBlock(BuiltInRegistries.DIAMOND_BLOCK);
+        update();
+    }
 
+    public void update() {
         glGetIntegerv(GL_VIEWPORT, viewport);
     }
 
@@ -71,6 +74,7 @@ public final class HudCubeRenderer {
                         0f, 0f, 0f,
                         0f, 1f, 0f
                 );
+        update();
     }
 }
 
