@@ -12,6 +12,7 @@ import org.mangorage.game.world.BlockPos;
 import java.util.Arrays;
 
 public final class Chunk {
+    private final InitializableSupplier<ChunkRenderer> chunkRenderer = InitializableSupplier.of(ChunkRenderer::new);
     private final int sX, sY, sZ;
     private final Block[][][] blocks;
     private volatile ChunkMesh chunkMesh = null;
@@ -33,7 +34,10 @@ public final class Chunk {
     }
 
     public void setBlock(Block block, BlockPos blockPos, BlockAction blockAction) { // Needs to be relative here...
-        if (!isValid(blockPos)) return;
+        if (!isValid(blockPos)) {
+            System.out.println("INVALID");
+            return;
+        }
         blocks[blockPos.x()][blockPos.y()][blockPos.z()] = block == null ? Blocks.AIR_BLOCK : block;
         if (blockAction == BlockAction.UPDATE) {
             updateMesh();
@@ -41,18 +45,29 @@ public final class Chunk {
     }
 
     public void updateMesh() {
-        this.chunkMesh = ChunkRenderer.get().buildMesh(blocks);
-        var a = 1;
+        this.chunkMesh = null;
+        if (!chunkRenderer.isLoaded()) {
+            chunkRenderer.init();
+        }
+        this.chunkMesh = chunkRenderer.get().buildMesh(blocks);
     }
 
     public Block getBlock(BlockPos blockPos) {
-        if (!isValid(blockPos)) return Blocks.AIR_BLOCK;
+        if (!isValid(blockPos)) {
+            if (blockPos.y() >= 0) {
+                System.out.println("INVALID A");
+            }
+            return Blocks.AIR_BLOCK;
+        }
         return blocks[blockPos.x()][blockPos.y()][blockPos.z()];
     }
 
     public void render(Matrix4f model, Matrix4f view, Matrix4f projection) {
         // ... Should never be null... but we check anyways...
         if (chunkMesh == null) return; // Cant render, we don't have a mesh yet!
-        ChunkRenderer.get().render(chunkMesh, model, view, projection);
+        if (!chunkRenderer.isLoaded()) {
+            chunkRenderer.init();
+        }
+        chunkRenderer.get().render(chunkMesh, model, view, projection);
     }
 }

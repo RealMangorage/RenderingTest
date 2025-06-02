@@ -11,6 +11,7 @@ import org.mangorage.game.core.Direction;
 import org.mangorage.game.core.KeybindRegistry;
 import org.mangorage.game.renderer.BlockOutlineRenderer;
 import org.mangorage.game.renderer.HudCubeRenderer;
+import org.mangorage.game.renderer.TextRenderer;
 import org.mangorage.game.util.supplier.InitializableSupplier;
 import org.mangorage.game.world.BlockAction;
 import org.mangorage.game.world.BlockPos;
@@ -53,6 +54,7 @@ public final class Game {
     // Misc
     private float yaw = -90.0f;
     private float pitch = 0.0f;
+    private int windowWidth = 800, windowHeight = 600;
 
     private float lastX = 400f, lastY = 300f;
     private boolean firstMouse = true;
@@ -60,9 +62,6 @@ public final class Game {
     // Delta/Frame info
     private float deltaTime = 0.0f;
     private float lastFrame = 0.0f;
-
-    // Keys
-    private final boolean[] keys = new boolean[1024];
 
     public void run() {
         // Setup error callback for debugging
@@ -87,11 +86,10 @@ public final class Game {
 
         glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
         glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
-        glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
-        glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
+        glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_COMPAT_PROFILE);
         glfwWindowHint(GLFW_RESIZABLE, GLFW_TRUE);
 
-        window = glfwCreateWindow(800, 600, "Cube Renderer Test", NULL, NULL);
+        window = glfwCreateWindow(windowWidth, windowHeight, "Cube Renderer Test", NULL, NULL);
         if (window == NULL) {
             throw new RuntimeException("Failed to create GLFW window");
         }
@@ -102,8 +100,8 @@ public final class Game {
         GL.createCapabilities();
 
         // Setup viewport and projection matrix
-        glViewport(0, 0, 800, 600);
-        float aspect = 800f / 600f;
+        glViewport(0, 0, windowWidth, windowHeight);
+        float aspect = ((float) windowWidth) / windowHeight;
         projection.setPerspective((float) Math.toRadians(45.0f), aspect, 0.1f, Float.POSITIVE_INFINITY);
 
         // Setup callbacks
@@ -112,7 +110,9 @@ public final class Game {
 
         glfwSetFramebufferSizeCallback(window, (win, width, height) -> {
             glViewport(0, 0, width, height);
-            float aspectN = 800f / 600f;
+            windowWidth = width;
+            windowHeight = height;
+            float aspectN = ((float) width) / height;
             projection.setPerspective((float) Math.toRadians(45.0f), aspectN, 0.1f, 100f);
             hudCubeRenderer.get().setScreenSize(width, height); // Assuming you have a method like this
         });
@@ -124,11 +124,11 @@ public final class Game {
         glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
         Blocks.init();
+        TextRenderer.init();
 
         // Init all the rendering side things...
 
         blockOutlineRenderer.init();
-        world.init();
         hudCubeRenderer.init();
 
     }
@@ -158,11 +158,60 @@ public final class Game {
 
             // In your render loop:
             hudCubeRenderer.get().render(20);
+            renderDebugHud(windowWidth, windowHeight);                   // ← THIS.  Do not screw up the order.
 
             glfwSwapBuffers(window);
             glfwPollEvents();
         }
     }
+
+    private void renderDebugHud(int windowWidth, int windowHeight) {
+        glDisable(GL_DEPTH_TEST);          // Kill depth test so text draws on top
+        glEnable(GL_TEXTURE_2D);           // Enable texturing for font textures
+        glEnable(GL_BLEND);                // Blend for alpha transparency
+        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+        // Save old projection matrix and switch to ortho for 2D pixel coords
+        glMatrixMode(GL_PROJECTION);
+        glPushMatrix();
+        glLoadIdentity();
+        glOrtho(0, windowWidth, windowHeight, 0, -1, 1);
+
+        // Save old modelview matrix and reset it
+        glMatrixMode(GL_MODELVIEW);
+        glPushMatrix();
+        glLoadIdentity();
+
+        // Build the debug string
+        float fps = deltaTime > 0 ? 1.0f / deltaTime : 0;
+        StringBuilder sb = new StringBuilder()
+                .append(String.format("FPS: %.0f\n", fps))
+                .append(String.format("Pos: (%.2f, %.2f, %.2f)\n", cameraPos.x, cameraPos.y, cameraPos.z))
+                .append(String.format("Yaw/Pitch: (%.2f, %.2f)\n", yaw, pitch))
+                .append(String.format("Selected Block: %s\n", blocks_all[selectedBlock].getName()));
+
+        if (selected != null) {
+            sb
+                    .append(String.format("Looking at Block Pos: X: %s Y: %s Z: %s\n", selected.x(), selected.y(), selected.z()))
+                    .append(String.format("Looking at Block: %s", world.getBlock(selected).getName()));
+        }
+
+        // Draw the string at pixel coords (10, 10) — top-left corner padding
+        TextRenderer.drawString(sb.toString(), 10, 20);
+
+        // Restore modelview matrix
+        glPopMatrix();
+
+        // Restore projection matrix
+        glMatrixMode(GL_PROJECTION);
+        glPopMatrix();
+
+        // Switch back to modelview for normal rendering
+        glMatrixMode(GL_MODELVIEW);
+
+        glEnable(GL_DEPTH_TEST);           // Turn depth test back on for 3D scene
+    }
+
 
     private GLFWCursorPosCallback mouseCallback() {
         return new GLFWCursorPosCallback() {
@@ -264,9 +313,7 @@ public final class Game {
         // Place grass block at fixed pos
         keybindRegistry.register((key, scancode, action, mods) -> {
             if ((action == GLFW_PRESS || action == GLFW_REPEAT) && key == GLFW_KEY_G) {
-                if (world != null) {
-                    world.setBlock(Blocks.GRASS_BLOCK, new BlockPos(15, 0, 15), BlockAction.UPDATE);
-                }
+                world.setBlock(Blocks.GRASS_BLOCK, new BlockPos(15, 0, 15), BlockAction.UPDATE);
                 return true;
             }
             return false;
