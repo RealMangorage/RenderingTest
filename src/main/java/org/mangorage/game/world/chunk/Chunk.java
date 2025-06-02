@@ -1,22 +1,24 @@
-package org.mangorage.game.world;
+package org.mangorage.game.world.chunk;
 
 import org.joml.Matrix4f;
 import org.mangorage.game.block.Block;
 import org.mangorage.game.core.Blocks;
-import org.mangorage.game.renderer.CubeRenderer;
+import org.mangorage.game.renderer.chunk.ChunkMesh;
+import org.mangorage.game.renderer.chunk.ChunkRenderer;
 import org.mangorage.game.util.supplier.InitializableSupplier;
+import org.mangorage.game.world.BlockPos;
 
 import java.util.Arrays;
 
-public final class WorldInstance {
-    private final InitializableSupplier<CubeRenderer> cubeRenderer = InitializableSupplier.of(CubeRenderer::new);
+public final class Chunk {
     private final int sX, sY, sZ;
     private final Block[][][] blocks;
+    private volatile ChunkMesh chunkMesh = null;
 
-    public WorldInstance(int sX, int sY, int sZ) {
-        this.sX = sX;
+    public Chunk(final int sY) {
+        this.sX = 16;
         this.sY = sY;
-        this.sZ = sZ;
+        this.sZ = 16;
         this.blocks = new Block[sX][sY][sZ];
         for (Block[][] block : blocks) {
             for (Block[] blocks : block) {
@@ -25,14 +27,18 @@ public final class WorldInstance {
         }
     }
 
-    boolean isValid(BlockPos blockPos) {
+    public void refreshChunkMesh() {
+        this.chunkMesh = ChunkRenderer.get().buildMesh(blocks);
+    }
+
+    public boolean isValid(BlockPos blockPos) {
         return blockPos.x() < sX && blockPos.y() < sY && blockPos.z() < sZ && blockPos.x() >= 0 && blockPos.y() >= 0 && blockPos.z() >= 0;
     }
 
-    public void setBlock(Block block, BlockPos blockPos) {
+    public void setBlock(Block block, BlockPos blockPos) { // Needs to be relative here...
         if (!isValid(blockPos)) return;
         blocks[blockPos.x()][blockPos.y()][blockPos.z()] = block == null ? Blocks.AIR_BLOCK : block;
-        cubeRenderer.get().buildMesh(blocks);
+        this.chunkMesh = ChunkRenderer.get().buildMesh(blocks);
     }
 
     public Block getBlock(BlockPos blockPos) {
@@ -41,27 +47,12 @@ public final class WorldInstance {
     }
 
     public void render(Matrix4f view, Matrix4f projection) {
-        cubeRenderer.get().render(new Matrix4f(), view, projection);
+        // ... Should never be null... but we check anyways...
+        if (chunkMesh == null) return; // Cant render, we don't have a mesh yet!
+        ChunkRenderer.get().render(chunkMesh, new Matrix4f(), view, projection);
     }
 
     public void init() {
-        cubeRenderer.init();
-
-        Block diamond = Blocks.DIAMOND_BLOCK;
-        Block grass = Blocks.GRASS_BLOCK;
-
-        for (int x = 0; x < sX; x++) {
-            for (int y = 0; y < 2; y++) {
-                for (int z = 0; z < sZ; z++) {
-                    if (y == 1) {
-                        blocks[x][y][z] = grass;
-                    } else {
-                        blocks[x][y][z] = diamond;
-                    }
-                }
-            }
-        }
-
-        cubeRenderer.get().buildMesh(blocks);
+        ChunkRenderer.get();
     }
 }

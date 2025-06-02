@@ -2,6 +2,10 @@ package org.mangorage.game;
 
 public final class Start {
     public static void main(String[] args) {
-        new Game().run();
+        try {
+            new Game().run();
+        } catch (Throwable e) {
+            e.printStackTrace();
+        }
     }
 }

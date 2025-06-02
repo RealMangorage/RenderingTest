@@ -17,6 +17,11 @@ final class DefaultInitializableSupplier<T> implements InitializableSupplier<T> 
     }
 
     @Override
+    public boolean isLoaded() {
+        return value != null;
+    }
+
+    @Override
     public T get() {
         return value;
     }

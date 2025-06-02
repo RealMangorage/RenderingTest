@@ -8,5 +8,5 @@ public interface InitializableSupplier<T> extends Supplier<T> {
     }
 
     void init();
-
+    boolean isLoaded();
 }

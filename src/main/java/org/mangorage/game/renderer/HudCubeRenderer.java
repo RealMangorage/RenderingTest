@@ -4,19 +4,21 @@ import org.joml.Matrix4f;
 import org.lwjgl.BufferUtils;
 import org.mangorage.game.block.Block;
 import org.mangorage.game.core.Blocks;
+import org.mangorage.game.renderer.chunk.ChunkMesh;
+import org.mangorage.game.renderer.chunk.ChunkRenderer;
+import org.mangorage.game.util.supplier.InitializableSupplier;
 
 import java.nio.IntBuffer;
 
 import static org.lwjgl.opengl.GL11.*;
 
 public final class HudCubeRenderer {
-    private final CubeRenderer cubeRenderer;
+    private final ChunkRenderer renderer = new ChunkRenderer();
     private final Matrix4f projection = new Matrix4f();
     private final Matrix4f view = new Matrix4f();
+    private volatile ChunkMesh chunkMesh = null;
 
     public HudCubeRenderer(int windowWidth, int windowHeight) {
-        cubeRenderer = new CubeRenderer();
-
         setScreenSize(windowWidth, windowHeight);
         setActiveBlock(Blocks.DIAMOND_BLOCK);
     }
@@ -24,7 +26,7 @@ public final class HudCubeRenderer {
     public void setActiveBlock(Block block) {
         Block[][][] blocks = new Block[1][1][1];
         blocks[0][0][0] = block;
-        cubeRenderer.buildMesh(blocks);
+        this.chunkMesh = renderer.buildMesh(blocks);
     }
 
     public void render(float size) {
@@ -46,14 +48,10 @@ public final class HudCubeRenderer {
                 .translate(0f, 0f, 0f)
                 .scale(size, size, size);
 
-        cubeRenderer.render(model, view, projection);
+        renderer.render(chunkMesh, model, view, projection);
 
         // Restore full viewport
         glViewport(viewport.get(0), viewport.get(1), viewport.get(2), viewport.get(3));
-    }
-
-    public void dispose() {
-        cubeRenderer.dispose();
     }
 
     public void setScreenSize(int width, int height) {

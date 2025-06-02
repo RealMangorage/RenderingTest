@@ -11,10 +11,10 @@ import org.mangorage.game.core.Direction;
 import org.mangorage.game.core.KeybindRegistry;
 import org.mangorage.game.renderer.BlockOutlineRenderer;
 import org.mangorage.game.renderer.HudCubeRenderer;
-import org.mangorage.game.util.Cooldown;
+import org.mangorage.game.renderer.chunk.ChunkRenderer;
 import org.mangorage.game.util.supplier.InitializableSupplier;
 import org.mangorage.game.world.BlockPos;
-import org.mangorage.game.world.WorldInstance;
+import org.mangorage.game.world.World;
 
 
 import static org.lwjgl.glfw.GLFW.*;
@@ -23,7 +23,7 @@ import static org.lwjgl.system.MemoryUtil.NULL;
 
 public final class Game {
 
-    private final WorldInstance worldInstance = new WorldInstance(16, 16, 16);
+    private final World world = new World();
     private final InitializableSupplier<BlockOutlineRenderer> blockOutlineRenderer = InitializableSupplier.of(BlockOutlineRenderer::new);
     private final InitializableSupplier<HudCubeRenderer> hudCubeRenderer = InitializableSupplier.of(() -> new HudCubeRenderer(800, 600));
 
@@ -126,9 +126,11 @@ public final class Game {
         Blocks.init();
 
         // Init all the rendering side things...
-        worldInstance.init();
+
         blockOutlineRenderer.init();
+        world.init();
         hudCubeRenderer.init();
+
     }
 
     private void loop() {
@@ -149,13 +151,13 @@ public final class Game {
             glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
             this.selected = getBlockInView(10);
-            worldInstance.render(view, projection);
+            world.render(view, projection);
 
             if (selected != null)
                 blockOutlineRenderer.get().render(selected.toVector3f(), view, projection);
 
             // In your render loop:
-            hudCubeRenderer.get().render(16);
+            hudCubeRenderer.get().render(20);
 
             glfwSwapBuffers(window);
             glfwPollEvents();
@@ -221,7 +223,7 @@ public final class Game {
             BlockPos pos = new BlockPos((int)Math.floor(currentPos.x),
                     (int)Math.floor(currentPos.y),
                     (int)Math.floor(currentPos.z));
-            if (!worldInstance.getBlock(pos).isAir()) {
+            if (!world.getBlock(pos).isAir()) {
                 return pos; // block hit
             }
         }
@@ -262,8 +264,8 @@ public final class Game {
         // Place grass block at fixed pos
         keybindRegistry.register((key, scancode, action, mods) -> {
             if ((action == GLFW_PRESS || action == GLFW_REPEAT) && key == GLFW_KEY_G) {
-                if (worldInstance != null) {
-                    worldInstance.setBlock(Blocks.GRASS_BLOCK, new BlockPos(15, 0, 15));
+                if (world != null) {
+                    world.setBlock(Blocks.GRASS_BLOCK, new BlockPos(15, 0, 15));
                 }
                 return true;
             }
@@ -274,7 +276,7 @@ public final class Game {
         keybindRegistry.register((key, scancode, action, mods) -> {
             if ((action == GLFW_PRESS || action == GLFW_REPEAT) && key == GLFW_KEY_F) {
                 if (selected != null) {
-                    worldInstance.setBlock(null, selected);
+                    world.setBlock(null, selected);
                 }
                 return true;
             }
@@ -285,7 +287,7 @@ public final class Game {
         keybindRegistry.register((key, scancode, action, mods) -> {
             if ((action == GLFW_PRESS || action == GLFW_REPEAT) && key == GLFW_KEY_H) {
                 if (selected != null) {
-                    worldInstance.setBlock(
+                    world.setBlock(
                             blocks_all[selectedBlock],
                             Direction.fromFacingVector(cameraFront).getOpposite().offset(selected)
                     );

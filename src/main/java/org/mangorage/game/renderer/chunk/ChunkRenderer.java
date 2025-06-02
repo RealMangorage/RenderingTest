@@ -1,4 +1,4 @@
-package org.mangorage.game.renderer;
+package org.mangorage.game.renderer.chunk;
 
 import org.joml.Matrix4f;
 import org.lwjgl.BufferUtils;
@@ -6,7 +6,7 @@ import org.lwjgl.system.MemoryStack;
 import org.mangorage.game.block.Block;
 import org.mangorage.game.core.Blocks;
 import org.mangorage.game.core.Direction;
-import org.mangorage.game.util.BlockGetter;
+import org.mangorage.game.util.supplier.InitializableSupplier;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -17,7 +17,6 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.function.Consumer;
 
 import static org.lwjgl.opengl.GL11.*;
 import static org.lwjgl.opengl.GL13.*;
@@ -27,15 +26,23 @@ import static org.lwjgl.opengl.GL30.*;
 import static org.lwjgl.stb.STBImage.*;
 import static org.mangorage.game.util.RenderUtil.rotateUVs;
 
-public final class CubeRenderer {
+public final class ChunkRenderer {
+    private static final InitializableSupplier<ChunkRenderer> INSTANCE = InitializableSupplier.of(ChunkRenderer::new);
+
+    public static ChunkRenderer get() {
+        if (!INSTANCE.isLoaded()) {
+            INSTANCE.init();
+        }
+        return INSTANCE.get();
+    }
+
     private final int vao;
     private final int vbo;
     private final int shaderProgram;
     private final int modelLoc, viewLoc, projLoc, texUniform;
     private final Map<String, Integer> textureCache = new HashMap<>();
-    private final List<DrawCommand> drawCommands = new ArrayList<>();
 
-    public CubeRenderer() {
+    public ChunkRenderer() {
         shaderProgram = createShaderProgram();
         vao = glGenVertexArrays();
         vbo = glGenBuffers();
@@ -85,9 +92,9 @@ public final class CubeRenderer {
         return textureId;
     }
 
-    public void buildMesh(Block[][][] blocks) {
+    public ChunkMesh buildMesh(Block[][][] blocks) {
         List<Float> vertices = new ArrayList<>();
-        drawCommands.clear();
+        List<DrawCommand> drawCommands = new ArrayList<>();
 
         int width = blocks.length;
         int height = blocks[0].length;
@@ -185,9 +192,11 @@ public final class CubeRenderer {
             glBufferData(GL_ARRAY_BUFFER, 0, GL_STATIC_DRAW);
             glBindBuffer(GL_ARRAY_BUFFER, 0);
         }
+
+        return new ChunkMesh(drawCommands);
     }
 
-    public void render(Matrix4f model, Matrix4f view, Matrix4f projection) {
+    public void render(ChunkMesh chunkMesh, Matrix4f model, Matrix4f view, Matrix4f projection) {
         glUseProgram(shaderProgram);
 
         try (MemoryStack stack = MemoryStack.stackPush()) {
@@ -207,24 +216,26 @@ public final class CubeRenderer {
         glActiveTexture(GL_TEXTURE0);
         glUniform1i(texUniform, 0);
 
+        final var drawCommands = chunkMesh.drawCommands();
+
         for (DrawCommand command : drawCommands) {
-            glBindTexture(GL_TEXTURE_2D, command.textureId);
+            glBindTexture(GL_TEXTURE_2D, command.textureId());
 
             glUseProgram(shaderProgram);
 
-            command.extra.accept(true);
+            command.extra().accept(true);
 
             int tintLoc = glGetUniformLocation(shaderProgram, "tint");
 
-            final float[] tint = command.tint;
+            final float[] tint = command.tint();
             if (tint == null) {
                 glUniform3f(tintLoc, 1.0f, 1.0f, 1.0f);  // No tint = white multiplier
             } else {
                 glUniform3f(tintLoc, tint[0], tint[1], tint[2]);
             }
 
-            glDrawArrays(GL_TRIANGLES, command.startIndex, command.vertexCount);
-            command.extra.accept(false);
+            glDrawArrays(GL_TRIANGLES, command.startIndex(), command.vertexCount());
+            command.extra().accept(false);
         }
 
         glBindVertexArray(0);
@@ -309,8 +320,6 @@ public final class CubeRenderer {
             throw new RuntimeException("Program link error: " + glGetProgramInfoLog(program));
         }
     }
-
-    private record DrawCommand(int textureId, int startIndex, int vertexCount, float[] tint, Consumer<Boolean> extra) {}
 
     public void dispose() {
         glDeleteBuffers(vbo);
