@@ -2,6 +2,7 @@ package org.mangorage.game;
 
 import org.joml.Matrix4f;
 import org.joml.Vector3f;
+import org.joml.Vector3i;
 import org.lwjgl.glfw.GLFWCursorPosCallback;
 import org.lwjgl.glfw.GLFWKeyCallback;
 import org.lwjgl.opengl.GL;
@@ -15,9 +16,9 @@ import org.mangorage.game.renderer.TextRenderer;
 import org.mangorage.game.util.Cooldown;
 import org.mangorage.game.util.supplier.InitializableSupplier;
 import org.mangorage.game.world.BlockAction;
+import org.mangorage.game.world.BlockHitResult;
 import org.mangorage.game.world.BlockPos;
 import org.mangorage.game.world.World;
-
 
 import static org.lwjgl.glfw.GLFW.*;
 import static org.lwjgl.opengl.GL11.*;
@@ -32,14 +33,14 @@ public final class Game {
     private final KeybindRegistry keybindRegistry = new KeybindRegistry();
 
     // Selected block pos/block
-    private BlockPos selected = null;
+    private BlockHitResult selected = null;
+    private Direction selectedFace = null; // <---- HERE IS YOUR SELECTED FACE, FINALLY
     private int selectedBlock = 0;
-
 
     // Window itself
     private long window;
 
-    // Various things releated to rendering...
+    // Various things related to rendering...
     private final Matrix4f view = new Matrix4f();
     private final Matrix4f projection = new Matrix4f();
 
@@ -76,7 +77,6 @@ public final class Game {
 
         world.saveAll();
     }
-
 
     private void init() {
         if (!glfwInit()) {
@@ -129,7 +129,6 @@ public final class Game {
         TextRenderer.init();
 
         // Init all the rendering side things...
-
         blockOutlineRenderer.init();
         hudCubeRenderer.init();
     }
@@ -155,16 +154,17 @@ public final class Game {
 
             glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-            this.selected = getBlockInView(10);
+            // Get selected block + face every frame, so it’s up to date for clicks and outline render
+            selected = getBlockInViewWithFace(16);
+            selectedFace = (selected != null) ? selected.getFace() : null;
+
             world.render(cameraPos, view, projection);
 
             if (selected != null)
-                blockOutlineRenderer.get().render(selected.toVector3f(), view, projection);
+                blockOutlineRenderer.get().render(selected.getPos().toVector3f(), view, projection);
 
-            // In your render loop:
             hudCubeRenderer.get().render(20);
-            renderDebugHud(windowWidth, windowHeight);                   // ← THIS.  Do not screw up the order.
-
+            renderDebugHud(windowWidth, windowHeight);
 
             glfwSwapBuffers(window);
             glfwPollEvents();
@@ -172,23 +172,20 @@ public final class Game {
     }
 
     private void renderDebugHud(int windowWidth, int windowHeight) {
-        glDisable(GL_DEPTH_TEST);          // Kill depth test so text draws on top
-        glEnable(GL_TEXTURE_2D);           // Enable texturing for font textures
-        glEnable(GL_BLEND);                // Blend for alpha transparency
+        glDisable(GL_DEPTH_TEST);
+        glEnable(GL_TEXTURE_2D);
+        glEnable(GL_BLEND);
         glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-        // Save old projection matrix and switch to ortho for 2D pixel coords
         glMatrixMode(GL_PROJECTION);
         glPushMatrix();
         glLoadIdentity();
         glOrtho(0, windowWidth, windowHeight, 0, -1, 1);
 
-        // Save old modelview matrix and reset it
         glMatrixMode(GL_MODELVIEW);
         glPushMatrix();
         glLoadIdentity();
 
-        // Build the debug string
         float fps = deltaTime > 0 ? 1.0f / deltaTime : 0;
         StringBuilder sb = new StringBuilder()
                 .append(String.format("FPS: %.0f\n", fps))
@@ -197,32 +194,26 @@ public final class Game {
                 .append(String.format("Selected Block: %s\n", BuiltInRegistries.BLOCK_REGISTRY.getAll().get(selectedBlock).getName()));
 
         if (selected != null) {
-            sb
-                    .append(String.format("Looking at Block Pos: X: %s Y: %s Z: %s\n", selected.x(), selected.y(), selected.z()))
-                    .append(String.format("Looking at Block: %s\n", world.getBlock(selected).getName()));
+            sb.append(String.format("Looking at Block Pos: X: %s Y: %s Z: %s\n", selected.getPos().x(), selected.getPos().y(), selected.getPos().z()))
+                    .append(String.format("Looking at Block: %s\n", world.getBlock(selected.getPos()).getName()))
+                    .append(String.format("Looking at Face: %s\n", selectedFace));
         }
 
         String direction = getFacingDirection(yaw);
         sb.append(String.format("Facing: %s\n", direction));
 
-        // Draw the string at pixel coords (10, 10) — top-left corner padding
         TextRenderer.drawString(sb.toString(), 10, 20);
 
-        // Restore modelview matrix
         glPopMatrix();
-
-        // Restore projection matrix
         glMatrixMode(GL_PROJECTION);
         glPopMatrix();
-
-        // Switch back to modelview for normal rendering
         glMatrixMode(GL_MODELVIEW);
 
-        glEnable(GL_DEPTH_TEST);           // Turn depth test back on for 3D scene
+        glEnable(GL_DEPTH_TEST);
     }
 
     private String getFacingDirection(float yaw) {
-        yaw = (yaw % 360 + 360) % 360; // Normalize to [0, 360)
+        yaw = (yaw % 360 + 360) % 360;
 
         if (yaw >= 45 && yaw < 135)
             return "South";
@@ -233,7 +224,6 @@ public final class Game {
         else
             return "East";
     }
-
 
     private GLFWCursorPosCallback mouseCallback() {
         return new GLFWCursorPosCallback() {
@@ -246,7 +236,7 @@ public final class Game {
                 }
 
                 float xoffset = (float) xpos - lastX;
-                float yoffset = lastY - (float) ypos; // reversed since y-coordinates go from top to bottom
+                float yoffset = lastY - (float) ypos;
 
                 lastX = (float) xpos;
                 lastY = (float) ypos;
@@ -258,7 +248,6 @@ public final class Game {
                 yaw += xoffset;
                 pitch += yoffset;
 
-                // Clamp the pitch angle
                 if (pitch > 89.0f) pitch = 89.0f;
                 if (pitch < -89.0f) pitch = -89.0f;
 
@@ -284,25 +273,60 @@ public final class Game {
         cameraFront = front.normalize();
     }
 
-    public BlockPos getBlockInView(float maxDistance) {
+    public BlockHitResult getBlockInViewWithFace(float maxDistance) {
         Vector3f rayOrigin = new Vector3f(cameraPos);
         Vector3f rayDirection = new Vector3f(cameraFront).normalize();
 
         Vector3f currentPos = new Vector3f(rayOrigin);
         for (int i = 0; i < maxDistance * 10; i++) {
-            currentPos.fma(0.1f, rayDirection); // move along the ray in 0.1 increments
-            BlockPos pos = new BlockPos((int)Math.floor(currentPos.x),
-                    (int)Math.floor(currentPos.y),
-                    (int)Math.floor(currentPos.z));
+            currentPos.fma(0.1f, rayDirection);
+            int blockX = (int) Math.floor(currentPos.x);
+            int blockY = (int) Math.floor(currentPos.y);
+            int blockZ = (int) Math.floor(currentPos.z);
+
+            BlockPos pos = new BlockPos(blockX, blockY, blockZ);
+
             if (!world.getBlock(pos).isAir()) {
-                return pos; // block hit
+                float dx = currentPos.x - blockX - 0.5f;
+                float dy = currentPos.y - blockY - 0.5f;
+                float dz = currentPos.z - blockZ - 0.5f;
+
+                Direction face;
+
+                float absDx = Math.abs(dx);
+                float absDy = Math.abs(dy);
+                float absDz = Math.abs(dz);
+
+                if (absDx > absDy && absDx > absDz) {
+                    face = dx > 0 ? Direction.EAST : Direction.WEST;
+                } else if (absDy > absDx && absDy > absDz) {
+                    face = dy > 0 ? Direction.UP : Direction.DOWN;
+                } else {
+                    face = dz > 0 ? Direction.SOUTH : Direction.NORTH;
+                }
+
+                return new BlockHitResult(pos, face);
             }
         }
-
-        return null; // nothing hit
+        return null;
     }
 
     private void configureKeyBinds() {
+        glfwSetMouseButtonCallback(window, (win, button, action, mods) -> {
+            if (action == GLFW_PRESS || action == GLFW_REPEAT) {
+                if (button == GLFW_MOUSE_BUTTON_RIGHT) {
+                    if (selected != null) {
+                        BlockPos placePos = selected.getFace().offset(selected.getPos());
+                        world.setBlock(BuiltInRegistries.BLOCK_REGISTRY.getAll().get(selectedBlock), placePos, BlockAction.UPDATE);
+                    }
+                } else if (button == GLFW_MOUSE_BUTTON_LEFT) {
+                    if (selected != null) {
+                        world.setBlock(null, selected.getPos(), BlockAction.UPDATE);
+                    }
+                }
+            }
+        });
+
         // Escape key - close window
         keybindRegistry.register((key, scancode, action, mods) -> {
             if (action == GLFW_PRESS && key == GLFW_KEY_ESCAPE) {
@@ -332,31 +356,6 @@ public final class Game {
             return true;
         }, -1);
 
-        // Remove selected block
-        keybindRegistry.register((key, scancode, action, mods) -> {
-            if ((action == GLFW_PRESS || action == GLFW_REPEAT) && key == GLFW_KEY_F) {
-                if (selected != null) {
-                    world.setBlock(null, selected, BlockAction.UPDATE);
-                }
-                return true;
-            }
-            return false;
-        }, 0);
-
-        // Place selected block
-        keybindRegistry.register((key, scancode, action, mods) -> {
-            if ((action == GLFW_PRESS || action == GLFW_REPEAT) && key == GLFW_KEY_H) {
-                if (selected != null) {
-                    world.setBlock(
-                            BuiltInRegistries.BLOCK_REGISTRY.getAll().get(selectedBlock),
-                            Direction.fromFacingVector(cameraFront).getOpposite().offset(selected),
-                            BlockAction.UPDATE
-                    );
-                }
-                return true;
-            }
-            return false;
-        }, 0);
 
         // Cycle selected block
         keybindRegistry.register((key, scancode, action, mods) -> {
