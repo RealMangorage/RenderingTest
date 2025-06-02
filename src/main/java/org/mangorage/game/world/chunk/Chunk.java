@@ -6,6 +6,7 @@ import org.mangorage.game.core.Blocks;
 import org.mangorage.game.renderer.chunk.ChunkMesh;
 import org.mangorage.game.renderer.chunk.ChunkRenderer;
 import org.mangorage.game.util.supplier.InitializableSupplier;
+import org.mangorage.game.world.BlockAction;
 import org.mangorage.game.world.BlockPos;
 
 import java.util.Arrays;
@@ -27,18 +28,21 @@ public final class Chunk {
         }
     }
 
-    public void refreshChunkMesh() {
-        this.chunkMesh = ChunkRenderer.get().buildMesh(blocks);
-    }
-
     public boolean isValid(BlockPos blockPos) {
         return blockPos.x() < sX && blockPos.y() < sY && blockPos.z() < sZ && blockPos.x() >= 0 && blockPos.y() >= 0 && blockPos.z() >= 0;
     }
 
-    public void setBlock(Block block, BlockPos blockPos) { // Needs to be relative here...
+    public void setBlock(Block block, BlockPos blockPos, BlockAction blockAction) { // Needs to be relative here...
         if (!isValid(blockPos)) return;
         blocks[blockPos.x()][blockPos.y()][blockPos.z()] = block == null ? Blocks.AIR_BLOCK : block;
+        if (blockAction == BlockAction.UPDATE) {
+            updateMesh();
+        }
+    }
+
+    public void updateMesh() {
         this.chunkMesh = ChunkRenderer.get().buildMesh(blocks);
+        var a = 1;
     }
 
     public Block getBlock(BlockPos blockPos) {
@@ -46,13 +50,9 @@ public final class Chunk {
         return blocks[blockPos.x()][blockPos.y()][blockPos.z()];
     }
 
-    public void render(Matrix4f view, Matrix4f projection) {
+    public void render(Matrix4f model, Matrix4f view, Matrix4f projection) {
         // ... Should never be null... but we check anyways...
         if (chunkMesh == null) return; // Cant render, we don't have a mesh yet!
-        ChunkRenderer.get().render(chunkMesh, new Matrix4f(), view, projection);
-    }
-
-    public void init() {
-        ChunkRenderer.get();
+        ChunkRenderer.get().render(chunkMesh, model, view, projection);
     }
 }

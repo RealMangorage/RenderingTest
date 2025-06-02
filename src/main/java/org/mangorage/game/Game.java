@@ -11,8 +11,8 @@ import org.mangorage.game.core.Direction;
 import org.mangorage.game.core.KeybindRegistry;
 import org.mangorage.game.renderer.BlockOutlineRenderer;
 import org.mangorage.game.renderer.HudCubeRenderer;
-import org.mangorage.game.renderer.chunk.ChunkRenderer;
 import org.mangorage.game.util.supplier.InitializableSupplier;
+import org.mangorage.game.world.BlockAction;
 import org.mangorage.game.world.BlockPos;
 import org.mangorage.game.world.World;
 
@@ -151,7 +151,7 @@ public final class Game {
             glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
             this.selected = getBlockInView(10);
-            world.render(view, projection);
+            world.render(cameraPos, view, projection);
 
             if (selected != null)
                 blockOutlineRenderer.get().render(selected.toVector3f(), view, projection);
@@ -265,7 +265,7 @@ public final class Game {
         keybindRegistry.register((key, scancode, action, mods) -> {
             if ((action == GLFW_PRESS || action == GLFW_REPEAT) && key == GLFW_KEY_G) {
                 if (world != null) {
-                    world.setBlock(Blocks.GRASS_BLOCK, new BlockPos(15, 0, 15));
+                    world.setBlock(Blocks.GRASS_BLOCK, new BlockPos(15, 0, 15), BlockAction.UPDATE);
                 }
                 return true;
             }
@@ -276,7 +276,7 @@ public final class Game {
         keybindRegistry.register((key, scancode, action, mods) -> {
             if ((action == GLFW_PRESS || action == GLFW_REPEAT) && key == GLFW_KEY_F) {
                 if (selected != null) {
-                    world.setBlock(null, selected);
+                    world.setBlock(null, selected, BlockAction.UPDATE);
                 }
                 return true;
             }
@@ -289,7 +289,8 @@ public final class Game {
                 if (selected != null) {
                     world.setBlock(
                             blocks_all[selectedBlock],
-                            Direction.fromFacingVector(cameraFront).getOpposite().offset(selected)
+                            Direction.fromFacingVector(cameraFront).getOpposite().offset(selected),
+                            BlockAction.UPDATE
                     );
                 }
                 return true;
