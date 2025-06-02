@@ -104,7 +104,7 @@ public final class Game {
         // Setup viewport and projection matrix
         glViewport(0, 0, 800, 600);
         float aspect = 800f / 600f;
-        projection.setPerspective((float) Math.toRadians(45.0f), aspect, 0.1f, 100f);
+        projection.setPerspective((float) Math.toRadians(45.0f), aspect, 0.1f, Float.POSITIVE_INFINITY);
 
         // Setup callbacks
         glfwSetCursorPosCallback(window, mouseCallback());
@@ -245,7 +245,7 @@ public final class Game {
         keybindRegistry.register((key, scancode, action, mods) -> {
             if (action != GLFW_PRESS && action != GLFW_REPEAT) return false;
 
-            float cameraSpeed = 32.5f * deltaTime;
+            float cameraSpeed = 64f * deltaTime;
             Vector3f right = new Vector3f();
             cameraFront.cross(cameraUp, right).normalize();
 

@@ -15,7 +15,6 @@ public final class World {
     private final Map<ChunkPos, Chunk> chunks = new ConcurrentHashMap<>();
 
     public Chunk getChunk(ChunkPos chunkPos) {
-        if (chunkPos.x() < 0 || chunkPos.z() < 0) return null;
         var chk = chunks.get(chunkPos);
         if (chk == null ) {
             try {
