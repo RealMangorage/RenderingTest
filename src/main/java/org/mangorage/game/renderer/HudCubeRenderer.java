@@ -16,27 +16,29 @@ public final class HudCubeRenderer {
     private final Matrix4f projection = new Matrix4f();
     private final Matrix4f view = new Matrix4f();
     private volatile ChunkMesh chunkMesh = null;
+    private IntBuffer viewport = BufferUtils.createIntBuffer(4);
 
     public HudCubeRenderer(int windowWidth, int windowHeight) {
         setScreenSize(windowWidth, windowHeight);
         setActiveBlock(BuiltInRegistries.DIAMOND_BLOCK);
+
+        glGetIntegerv(GL_VIEWPORT, viewport);
     }
 
     public void setActiveBlock(Block block) {
-        int[][][] blocks = new int[1][1][1];
+        int[][][] blocks = new int[16][16][16];
         blocks[0][0][0] = BuiltInRegistries.BLOCK_REGISTRY.getInternalId(block);
         final var oldMesh = this.chunkMesh;
         this.chunkMesh = null;
         if (oldMesh != null) {
             oldMesh.dispose();
         }
-        this.chunkMesh = ChunkRenderer.get().buildMesh(blocks);
+        this.chunkMesh = ChunkRenderer.get().buildMesh(null, null, blocks);
     }
 
     public void render(float size) {
         // Save current viewport
-        IntBuffer viewport = BufferUtils.createIntBuffer(4);
-        glGetIntegerv(GL_VIEWPORT, viewport);
+
 
         int fullWidth = viewport.get(2);
         int fullHeight = viewport.get(3);

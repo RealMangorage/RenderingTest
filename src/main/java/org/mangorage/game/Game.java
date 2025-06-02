@@ -43,7 +43,7 @@ public final class Game {
     private final Matrix4f view = new Matrix4f();
     private final Matrix4f projection = new Matrix4f();
 
-    private final Vector3f cameraPos = new Vector3f(0f, 0f, 3f);
+    private final Vector3f cameraPos = new Vector3f(0f, 20f, 3f);
     private Vector3f cameraFront = new Vector3f(0f, 0f, -1f);
     private final Vector3f cameraUp = new Vector3f(0f, 1f, 0f);
 
@@ -94,7 +94,7 @@ public final class Game {
         }
 
         glfwMakeContextCurrent(window);
-        glfwSwapInterval(1); // Enable v-sync
+        glfwSwapInterval(0); // Disable v-sync
         glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
         GL.createCapabilities();
 
@@ -117,6 +117,8 @@ public final class Game {
         });
 
         glEnable(GL_DEPTH_TEST);
+        glEnable(GL_CULL_FACE);
+        glCullFace(GL_BACK);
         glClearColor(0.2f, 0.3f, 0.3f, 1f);
 
         glEnable(GL_BLEND);
@@ -196,8 +198,11 @@ public final class Game {
         if (selected != null) {
             sb
                     .append(String.format("Looking at Block Pos: X: %s Y: %s Z: %s\n", selected.x(), selected.y(), selected.z()))
-                    .append(String.format("Looking at Block: %s", world.getBlock(selected).getName()));
+                    .append(String.format("Looking at Block: %s\n", world.getBlock(selected).getName()));
         }
+
+        String direction = getFacingDirection(yaw);
+        sb.append(String.format("Facing: %s\n", direction));
 
         // Draw the string at pixel coords (10, 10) — top-left corner padding
         TextRenderer.drawString(sb.toString(), 10, 20);
@@ -213,6 +218,19 @@ public final class Game {
         glMatrixMode(GL_MODELVIEW);
 
         glEnable(GL_DEPTH_TEST);           // Turn depth test back on for 3D scene
+    }
+
+    private String getFacingDirection(float yaw) {
+        yaw = (yaw % 360 + 360) % 360; // Normalize to [0, 360)
+
+        if (yaw >= 45 && yaw < 135)
+            return "South";
+        else if (yaw >= 135 && yaw < 225)
+            return "West";
+        else if (yaw >= 225 && yaw < 315)
+            return "North";
+        else
+            return "East";
     }
 
 

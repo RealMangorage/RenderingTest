@@ -4,6 +4,7 @@ import org.joml.Matrix4f;
 import org.joml.Vector3f;
 import org.mangorage.game.block.Block;
 import org.mangorage.game.core.BuiltInRegistries;
+import org.mangorage.game.core.Direction;
 import org.mangorage.game.world.chunk.Chunk;
 import org.mangorage.game.world.chunk.ChunkPos;
 
@@ -11,20 +12,24 @@ import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
-import java.io.File;
 import java.io.FileInputStream;
-import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+
+import java.util.EnumMap;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 public final class World {
-    private static final int RENDER_DISTANCE = 2;
+    private static final int RENDER_DISTANCE = 6;
 
     private final Map<ChunkPos, Chunk> chunks = new ConcurrentHashMap<>();
+
+    public Chunk getLoadedChunk(ChunkPos chunkPos) {
+        return chunks.get(chunkPos);
+    }
 
     public Chunk getChunk(ChunkPos chunkPos) {
         return chunks.computeIfAbsent(chunkPos, this::loadChunk);
@@ -59,6 +64,7 @@ public final class World {
     }
 
     public void render(Vector3f cameraPos, Matrix4f view, Matrix4f projection) {
+        chunks.forEach((d, c) -> c.updateMesh());
         int cameraChunkX = Math.floorDiv((int) cameraPos.x, 16);
         int cameraChunkZ = Math.floorDiv((int) cameraPos.z, 16);
 
@@ -109,6 +115,7 @@ public final class World {
         saveChunk(chunk, pos);
     }
 
+
     public Chunk loadChunk(ChunkPos chunkPos) {
         Path worldFolder = Path.of("world");
         if (!Files.exists(worldFolder)) return generateChunk(chunkPos);
@@ -121,7 +128,7 @@ public final class World {
             int y = in.readInt();
             int z = in.readInt();
 
-            Chunk chunk = new Chunk(255);
+            Chunk chunk = new Chunk(255, this, chunkPos);
 
             // Read the data
             for (int i = 0; i < x; i++) {
@@ -135,8 +142,6 @@ public final class World {
                     }
                 }
             }
-
-            chunk.updateMesh();
 
             return chunk;
         } catch (IOException e) {
@@ -182,7 +187,7 @@ public final class World {
     }
 
     public Chunk generateChunk(ChunkPos chunkPos) {
-        Chunk chunk = new Chunk(255); // Chunk Height
+        Chunk chunk = new Chunk(255, this, chunkPos); // Chunk Height
 
         for (int x = 0; x < 16; x++) {
             for (int z = 0; z < 16; z++) {

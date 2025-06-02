@@ -7,6 +7,9 @@ import org.mangorage.game.block.Block;
 import org.mangorage.game.core.BuiltInRegistries;
 import org.mangorage.game.core.Direction;
 import org.mangorage.game.util.supplier.InitializableSupplier;
+import org.mangorage.game.world.World;
+import org.mangorage.game.world.chunk.Chunk;
+import org.mangorage.game.world.chunk.ChunkPos;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -98,7 +101,7 @@ public final class ChunkRenderer {
         return textureId;
     }
 
-    public ChunkMesh buildMesh(int[][][] blocks) {
+    public ChunkMesh buildMesh(World world, ChunkPos chunkPos, int[][][] blocks) {
         List<Float> vertices = new ArrayList<>();
         List<DrawCommand> drawCommands = new ArrayList<>();
 
@@ -117,10 +120,36 @@ public final class ChunkRenderer {
                         int ny = y + dir.y;
                         int nz = z + dir.z;
 
-                        boolean inBounds = nx >= 0 && ny >= 0 && nz >= 0
-                                && nx < width && ny < height && nz < depth;
+                        Block neighborBlock = null;
 
-                        boolean shouldRenderFace = !inBounds || BuiltInRegistries.BLOCK_REGISTRY.getByInternalId(blocks[nx][ny][nz]).isAir();
+                        if (nx >= 0 && nx < 16 && nz >= 0 && nz < 16 && ny >= 0 && ny < height) {
+                            // Inside current chunk
+                            neighborBlock = BuiltInRegistries.BLOCK_REGISTRY.getByInternalId(blocks[nx][ny][nz]);
+                        } else if (world != null) {
+                            // Outside current chunk — calculate world position
+                            int worldX = chunkPos.x() * 16 + nx;
+                            int worldY = ny;
+                            int worldZ = chunkPos.z() * 16 + nz;
+
+                            int chunkX = (int) Math.floor(worldX / 16.0);
+                            int chunkZ = (int) Math.floor(worldZ / 16.0);
+                            int localX = Math.floorMod(worldX, 16);
+                            int localZ = Math.floorMod(worldZ, 16);
+
+                            ChunkPos neighborChunkPos = new ChunkPos(chunkX, chunkZ);
+
+                            try {
+                                Chunk neighborChunk = world.getLoadedChunk(neighborChunkPos);
+                                if (neighborChunk != null && worldY >= 0 && worldY < height) {
+                                    int[][][] neighborBlocks = neighborChunk.getSaveData();
+                                    neighborBlock = BuiltInRegistries.BLOCK_REGISTRY.getByInternalId(neighborBlocks[localX][worldY][localZ]);
+                                }
+                            } catch (Throwable ignored) {
+                                // You screw up? Catch it and move on. Typical.
+                            }
+                        }
+
+                        boolean shouldRenderFace = neighborBlock == null || neighborBlock.isAir();
 
                         if (shouldRenderFace) {
                             int vertexStart = vertices.size() / 5;

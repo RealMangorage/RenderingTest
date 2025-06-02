@@ -70,17 +70,21 @@ public final class TextRenderer {
 
                 stbtt_GetBakedQuad(charData, 512, 512, c - 32, xPos, yPos, quad, true);
 
-                glTexCoord2f(quad.s0(), quad.t0());
-                glVertex2f(quad.x0(), quad.y0());
 
-                glTexCoord2f(quad.s1(), quad.t0());
-                glVertex2f(quad.x1(), quad.y0());
+                glTexCoord2f(quad.s0(), quad.t1());
+                glVertex2f(quad.x0(), quad.y1());
+
 
                 glTexCoord2f(quad.s1(), quad.t1());
                 glVertex2f(quad.x1(), quad.y1());
 
-                glTexCoord2f(quad.s0(), quad.t1());
-                glVertex2f(quad.x0(), quad.y1());
+                glTexCoord2f(quad.s1(), quad.t0());
+                glVertex2f(quad.x1(), quad.y0());
+
+
+                glTexCoord2f(quad.s0(), quad.t0());
+                glVertex2f(quad.x0(), quad.y0());
+                
             }
 
             glEnd();
