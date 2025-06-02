@@ -10,7 +10,7 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 public final class World {
-    private static final int RENDER_DISTANCE = 5;
+    private static final int RENDER_DISTANCE = 2;
 
     private final Map<ChunkPos, Chunk> chunks = new ConcurrentHashMap<>();
 
@@ -65,6 +65,35 @@ public final class World {
                 chunk.render(model, view, projection);
             }
         }
+    }
+
+    public void clearUnusedChunks(Vector3f cameraPos) {
+        int cameraChunkX = Math.floorDiv((int) cameraPos.x, 16);
+        int cameraChunkZ = Math.floorDiv((int) cameraPos.z, 16);
+
+        chunks.entrySet().removeIf(entry -> {
+            ChunkPos pos = entry.getKey();
+            Chunk chunk = entry.getValue();
+
+            int dx = pos.x() - cameraChunkX;
+            int dz = pos.z() - cameraChunkZ;
+
+            boolean outside = dx < -RENDER_DISTANCE || dx > RENDER_DISTANCE
+                    || dz < -RENDER_DISTANCE || dz > RENDER_DISTANCE;
+
+            if (outside) {
+                // YOUR EXTRA LOGIC HERE: e.g. save chunk data, log info, free resources
+                onChunkRemoved(chunk, pos);
+            }
+
+            return outside;
+        });
+    }
+
+    private void onChunkRemoved(Chunk chunk, ChunkPos pos) {
+        // Example of extra logic:
+        System.out.println("Removing chunk at " + pos);
+        chunk.dispose();
     }
 
     public Chunk generateChunk(ChunkPos chunkPos) {

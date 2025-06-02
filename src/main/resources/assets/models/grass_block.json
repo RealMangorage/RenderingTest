@@ -1,6 +1,6 @@
 {
   "textures": {
-    "UP": "grass_block_top.png",
+    "UP": "grass_block.png",
     "DOWN": "dirt.png",
     "NORTH": "dirt.png",
     "SOUTH": "dirt.png",

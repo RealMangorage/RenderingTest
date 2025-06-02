@@ -11,7 +11,6 @@ import org.mangorage.game.util.supplier.InitializableSupplier;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.ByteBuffer;
-import java.nio.FloatBuffer;
 import java.nio.IntBuffer;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -37,25 +36,31 @@ public final class ChunkRenderer {
         return INSTANCE.get();
     }
 
-    private final int vao;
-    private final int vbo;
     private final int shaderProgram;
-    private final int modelLoc, viewLoc, projLoc, texUniform;
+    private final int modelLoc, viewLoc, projLoc, texUniformSampler, texUniform, tintLoc;
+
     private final Map<String, Integer> textureCache = new HashMap<>();
 
-    public ChunkRenderer() {
+    ChunkRenderer() {
         shaderProgram = createShaderProgram();
-        vao = glGenVertexArrays();
-        vbo = glGenBuffers();
 
         modelLoc = glGetUniformLocation(shaderProgram, "model");
         viewLoc = glGetUniformLocation(shaderProgram, "view");
         projLoc = glGetUniformLocation(shaderProgram, "projection");
-        texUniform = glGetUniformLocation(shaderProgram, "texSampler");
+        texUniformSampler = glGetUniformLocation(shaderProgram, "texSampler");
+
+        tintLoc = glGetUniformLocation(shaderProgram, "tint");
+        texUniform = glGetUniformLocation(shaderProgram, "tex"); // or whatever your sampler uniform is named
     }
 
     private int getOrCreateTexture(String resourceName) {
-        return textureCache.computeIfAbsent(resourceName, this::loadTextureFromResource);
+        return textureCache.computeIfAbsent(resourceName, name -> {
+            try {
+                return loadTextureFromResource(name);
+            } catch (Throwable e) {
+                return loadTextureFromResource("assets/textures/misc/missing.png");
+            }
+        });
     }
 
     private int loadTextureFromResource(String resourceName) {
@@ -104,7 +109,7 @@ public final class ChunkRenderer {
         for (int x = 0; x < width; x++) {
             for (int y = 0; y < height; y++) {
                 for (int z = 0; z < depth; z++) {
-                    final var currentBlock = blocks[x][y][z];
+                    Block currentBlock = blocks[x][y][z];
                     if (currentBlock == null || currentBlock.isAir()) continue;
 
                     for (Direction dir : Direction.values()) {
@@ -112,49 +117,35 @@ public final class ChunkRenderer {
                         int ny = y + dir.y;
                         int nz = z + dir.z;
 
-                        boolean isInBounds = !(nx < 0 || ny < 0 || nz < 0 || nx >= width || ny >= height || nz >= depth);
-                        boolean shouldRenderFace = !isInBounds && !currentBlock.isAir();
+                        boolean inBounds = nx >= 0 && ny >= 0 && nz >= 0
+                                && nx < width && ny < height && nz < depth;
 
-                        if (isInBounds) {
-                            Block neighbor = blocks[nx][ny][nz];
-                            if (neighbor.isAir())
-                                shouldRenderFace = true;
-                        }
+                        boolean shouldRenderFace = !inBounds || blocks[nx][ny][nz] == null || blocks[nx][ny][nz].isAir();
 
                         if (shouldRenderFace) {
-                            int currentVertexOffset = vertices.size() / 5;
+                            int vertexStart = vertices.size() / 5;
                             addFaceVertices(vertices, x, y, z, currentBlock, dir);
-                            int addedVertices = (vertices.size() / 5) - currentVertexOffset;
+                            int addedVerts = (vertices.size() / 5) - vertexStart;
 
-                            if (addedVertices > 0) {
-
+                            if (addedVerts > 0) {
                                 if (currentBlock != Blocks.GRASS_BLOCK) {
-                                    int textureId = getOrCreateTexture(currentBlock.getBlockInfo().getTexture(dir));
+                                    int texId = getOrCreateTexture(currentBlock.getBlockInfo().getTexture(dir));
                                     float[] tint = currentBlock.getTint(dir, 1);
-                                    drawCommands.add(new DrawCommand(textureId, currentVertexOffset, addedVertices, tint, state -> {}));
-                                }
-
-
-                                if (currentBlock == Blocks.GRASS_BLOCK) {
-
+                                    drawCommands.add(new DrawCommand(texId, vertexStart, addedVerts, tint, state -> {}));
+                                } else {
                                     float[] tint = currentBlock.getTint(dir, 1);
+                                    int texId = getOrCreateTexture(currentBlock.getBlockInfo().getTexture(dir));
+                                    drawCommands.add(new DrawCommand(texId, vertexStart, addedVerts, tint, state -> {}));
 
-                                    int textureId = getOrCreateTexture(currentBlock.getBlockInfo().getTexture(dir));
-                                    drawCommands.add(new DrawCommand(textureId, currentVertexOffset, addedVertices, tint, state -> {}));
-
-
-                                    int textureIdOverlay = getOrCreateTexture("assets/textures/blocks/grass_block_side_overlay.png");
-
+                                    int texOverlay = getOrCreateTexture("assets/textures/blocks/grass_block_side_overlay.png");
                                     if (dir != Direction.UP && dir != Direction.DOWN) {
-                                        drawCommands.add(new DrawCommand(textureIdOverlay, currentVertexOffset, addedVertices, currentBlock.getTint(dir, 2), state -> {
+                                        drawCommands.add(new DrawCommand(texOverlay, vertexStart, addedVerts, currentBlock.getTint(dir, 2), state -> {
                                             if (state) {
                                                 glEnable(GL_BLEND);
                                                 glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-
                                                 glEnable(GL_POLYGON_OFFSET_FILL);
                                                 glPolygonOffset(-0.02f, 0f);
-
-                                                glDepthMask(false);  // disable writing to depth buffer for overlay
+                                                glDepthMask(false);
                                             } else {
                                                 glPolygonOffset(0f, 0f);
                                                 glDepthMask(true);
@@ -164,7 +155,6 @@ public final class ChunkRenderer {
                                         }));
                                     }
                                 }
-
                             }
                         }
                     }
@@ -172,12 +162,16 @@ public final class ChunkRenderer {
             }
         }
 
+        int meshVao = glGenVertexArrays();
+        int meshVbo = glGenBuffers();
+
+        glBindVertexArray(meshVao);
+        glBindBuffer(GL_ARRAY_BUFFER, meshVbo);
+
         if (!vertices.isEmpty()) {
             float[] vertexArray = new float[vertices.size()];
             for (int i = 0; i < vertexArray.length; i++) vertexArray[i] = vertices.get(i);
 
-            glBindVertexArray(vao);
-            glBindBuffer(GL_ARRAY_BUFFER, vbo);
             glBufferData(GL_ARRAY_BUFFER, vertexArray, GL_STATIC_DRAW);
 
             glVertexAttribPointer(0, 3, GL_FLOAT, false, 5 * Float.BYTES, 0);
@@ -185,17 +179,16 @@ public final class ChunkRenderer {
 
             glVertexAttribPointer(1, 2, GL_FLOAT, false, 5 * Float.BYTES, 3 * Float.BYTES);
             glEnableVertexAttribArray(1);
-
-            glBindBuffer(GL_ARRAY_BUFFER, 0);
-            glBindVertexArray(0);
         } else {
-            glBindBuffer(GL_ARRAY_BUFFER, vbo);
             glBufferData(GL_ARRAY_BUFFER, 0, GL_STATIC_DRAW);
-            glBindBuffer(GL_ARRAY_BUFFER, 0);
         }
 
-        return new ChunkMesh(drawCommands);
+        glBindBuffer(GL_ARRAY_BUFFER, 0);
+        glBindVertexArray(0);
+
+        return new ChunkMesh(meshVao, meshVbo, drawCommands);
     }
+
 
     private void addFaceVertices(List<Float> vertices, int x, int y, int z, Block blockInstance, Direction dir) {
         float[][] face = blockInstance.getShape()[dir.ordinal()];
@@ -279,67 +272,53 @@ public final class ChunkRenderer {
     public void render(ChunkMesh chunkMesh, Matrix4f model, Matrix4f view, Matrix4f projection) {
         glUseProgram(shaderProgram);
 
-        // Upload matrices once
         try (MemoryStack stack = MemoryStack.stackPush()) {
-            FloatBuffer modelBuf = stack.mallocFloat(16);
-            FloatBuffer viewBuf = stack.mallocFloat(16);
-            FloatBuffer projBuf = stack.mallocFloat(16);
-            model.get(modelBuf);
-            view.get(viewBuf);
-            projection.get(projBuf);
-
-            glUniformMatrix4fv(modelLoc, false, modelBuf);
-            glUniformMatrix4fv(viewLoc, false, viewBuf);
-            glUniformMatrix4fv(projLoc, false, projBuf);
+            glUniformMatrix4fv(modelLoc, false, model.get(stack.mallocFloat(16)));
+            glUniformMatrix4fv(viewLoc, false, view.get(stack.mallocFloat(16)));
+            glUniformMatrix4fv(projLoc, false, projection.get(stack.mallocFloat(16)));
         }
 
-        glBindVertexArray(vao);
+        glBindVertexArray(chunkMesh.getVao());
         glActiveTexture(GL_TEXTURE0);
         glUniform1i(texUniform, 0);
 
-        // Cache uniform location OUTSIDE the loop
-        int tintLoc = glGetUniformLocation(shaderProgram, "tint");
+        int lastTexture = -1;
+        float[] lastTint = null;
+        Consumer<Boolean> lastExtra = null;
 
-        // Batch draw commands by texture to avoid excessive binds
-        Map<Integer, List<DrawCommand>> batches = new HashMap<>();
         for (DrawCommand cmd : chunkMesh.drawCommands()) {
-            batches.computeIfAbsent(cmd.textureId(), k -> new ArrayList<>()).add(cmd);
-        }
+            if (cmd.textureId() != lastTexture) {
+                glBindTexture(GL_TEXTURE_2D, cmd.textureId());
+                lastTexture = cmd.textureId();
+            }
 
-        for (Map.Entry<Integer, List<DrawCommand>> batch : batches.entrySet()) {
-            glBindTexture(GL_TEXTURE_2D, batch.getKey());
+            Consumer<Boolean> extra = cmd.extra();
+            if (lastExtra != extra) {
+                if (lastExtra != null) lastExtra.accept(false);
+                if (extra != null) extra.accept(true);
+                lastExtra = extra;
+            }
 
-            Consumer<Boolean> lastExtra = null;
-            for (DrawCommand command : batch.getValue()) {
-                // Only change GL state if needed
-                Consumer<Boolean> extra = command.extra();
-                if (lastExtra != extra) {
-                    if (lastExtra != null) lastExtra.accept(false);
-                    if (extra != null) extra.accept(true);
-                    lastExtra = extra;
-                }
-
-                float[] tint = command.tint();
+            float[] tint = cmd.tint();
+            if (lastTint == null || !java.util.Arrays.equals(tint, lastTint)) {
                 if (tint == null) {
                     glUniform3f(tintLoc, 1f, 1f, 1f);
                 } else {
                     glUniform3f(tintLoc, tint[0], tint[1], tint[2]);
                 }
-
-                glDrawArrays(GL_TRIANGLES, command.startIndex(), command.vertexCount());
+                lastTint = tint;
             }
 
-            // Reset last extra state
-            if (lastExtra != null) lastExtra.accept(false);
+            glDrawArrays(GL_TRIANGLES, cmd.startIndex(), cmd.vertexCount());
         }
+
+        if (lastExtra != null) lastExtra.accept(false);
 
         glBindVertexArray(0);
         glUseProgram(0);
     }
 
     public void dispose() {
-        glDeleteBuffers(vbo);
-        glDeleteVertexArrays(vao);
         glDeleteProgram(shaderProgram);
         for (int textureId : textureCache.values()) glDeleteTextures(textureId);
         textureCache.clear();

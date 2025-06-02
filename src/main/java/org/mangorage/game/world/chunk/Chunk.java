@@ -12,7 +12,6 @@ import org.mangorage.game.world.BlockPos;
 import java.util.Arrays;
 
 public final class Chunk {
-    private final InitializableSupplier<ChunkRenderer> chunkRenderer = InitializableSupplier.of(ChunkRenderer::new);
     private final int sX, sY, sZ;
     private final Block[][][] blocks;
     private volatile ChunkMesh chunkMesh = null;
@@ -42,11 +41,16 @@ public final class Chunk {
     }
 
     public void updateMesh() {
+        final var oldMesh = chunkMesh;
         this.chunkMesh = null;
-        if (!chunkRenderer.isLoaded()) {
-            chunkRenderer.init();
+        this.chunkMesh = ChunkRenderer.get().buildMesh(blocks);
+        if (oldMesh != null) oldMesh.dispose();
+    }
+
+    public void dispose() {
+        if (this.chunkMesh != null) {
+            this.chunkMesh.dispose();
         }
-        this.chunkMesh = chunkRenderer.get().buildMesh(blocks);
     }
 
     public Block getBlock(BlockPos blockPos) {
@@ -57,9 +61,6 @@ public final class Chunk {
     public void render(Matrix4f model, Matrix4f view, Matrix4f projection) {
         // ... Should never be null... but we check anyways...
         if (chunkMesh == null) return; // Cant render, we don't have a mesh yet!
-        if (!chunkRenderer.isLoaded()) {
-            chunkRenderer.init();
-        }
-        chunkRenderer.get().render(chunkMesh, model, view, projection);
+        ChunkRenderer.get().render(chunkMesh, model, view, projection);
     }
 }

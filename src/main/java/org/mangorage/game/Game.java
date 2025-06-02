@@ -12,6 +12,7 @@ import org.mangorage.game.core.KeybindRegistry;
 import org.mangorage.game.renderer.BlockOutlineRenderer;
 import org.mangorage.game.renderer.HudCubeRenderer;
 import org.mangorage.game.renderer.TextRenderer;
+import org.mangorage.game.util.Cooldown;
 import org.mangorage.game.util.supplier.InitializableSupplier;
 import org.mangorage.game.world.BlockAction;
 import org.mangorage.game.world.BlockPos;
@@ -55,6 +56,7 @@ public final class Game {
     private float yaw = -90.0f;
     private float pitch = 0.0f;
     private int windowWidth = 800, windowHeight = 600;
+    private final Cooldown worldGarbageCollector = new Cooldown(1000 * (60));
 
     private float lastX = 400f, lastY = 300f;
     private boolean firstMouse = true;
@@ -130,11 +132,14 @@ public final class Game {
 
         blockOutlineRenderer.init();
         hudCubeRenderer.init();
-
     }
 
     private void loop() {
         while (!glfwWindowShouldClose(window)) {
+            if (worldGarbageCollector.consume()) {
+                world.clearUnusedChunks(cameraPos);
+            }
+
             float currentFrame = (float) glfwGetTime();
             deltaTime = currentFrame - lastFrame;
             lastFrame = currentFrame;
@@ -159,6 +164,7 @@ public final class Game {
             // In your render loop:
             hudCubeRenderer.get().render(20);
             renderDebugHud(windowWidth, windowHeight);                   // ← THIS.  Do not screw up the order.
+
 
             glfwSwapBuffers(window);
             glfwPollEvents();
