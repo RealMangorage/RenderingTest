@@ -3,10 +3,14 @@ package org.mangorage.game.block;
 import org.mangorage.game.core.BuiltInRegistries;
 import org.mangorage.game.core.Direction;
 import org.mangorage.game.core.data.blockinfo.BlockInfo;
+import org.mangorage.game.renderer.block.BlockRenderer;
+import org.mangorage.game.renderer.block.SimpleBlockRenderer;
 import org.mangorage.game.util.RenderUtil;
 import org.mangorage.game.util.supplier.InitializableSupplier;
 
 public class Block {
+    private static final SimpleBlockRenderer simpleBlockRenderer = new SimpleBlockRenderer();
+
     private static final float[] DEFAULT_TINT = new float[]{1f, 1f, 1f};;
 
     // The default cube shape with interleaved position (xyz) and texture coordinates (uv)
@@ -80,5 +84,9 @@ public class Block {
 
     public float[] getTint(Direction face, int layer) {
         return RenderUtil.adjustForBrightness(DEFAULT_TINT, face);
+    }
+
+    public BlockRenderer getRenderer() {
+        return simpleBlockRenderer;
     }
 }

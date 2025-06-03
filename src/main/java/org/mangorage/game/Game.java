@@ -2,11 +2,9 @@ package org.mangorage.game;
 
 import org.joml.Matrix4f;
 import org.joml.Vector3f;
-import org.joml.Vector3i;
 import org.lwjgl.glfw.GLFWCursorPosCallback;
 import org.lwjgl.glfw.GLFWKeyCallback;
 import org.lwjgl.opengl.GL;
-import org.mangorage.game.block.Block;
 import org.mangorage.game.core.BuiltInRegistries;
 import org.mangorage.game.core.Direction;
 import org.mangorage.game.core.KeybindRegistry;

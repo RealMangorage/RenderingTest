@@ -23,7 +23,7 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 public final class World {
-    private static final int RENDER_DISTANCE = 6;
+    private static final int RENDER_DISTANCE = 8;
 
     private final Map<ChunkPos, Chunk> chunks = new ConcurrentHashMap<>();
 
@@ -187,7 +187,7 @@ public final class World {
     }
 
     public Chunk generateChunk(ChunkPos chunkPos) {
-        Chunk chunk = new Chunk(255, this, chunkPos); // Chunk Height
+        Chunk chunk = new Chunk(4, this, chunkPos); // Chunk Height
 
         for (int x = 0; x < 16; x++) {
             for (int z = 0; z < 16; z++) {
