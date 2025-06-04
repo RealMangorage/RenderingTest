@@ -6,4 +6,9 @@ public final class AirBlock extends Block {
     public boolean isAir() {
         return true;
     }
+
+    @Override
+    public boolean isSolid() {
+        return false;
+    }
 }

@@ -54,4 +54,9 @@ public final class StairBlock extends Block{
     public BlockRenderer getRenderer() {
         return stairBlockRenderer;
     }
+
+    @Override
+    public boolean isSolid() {
+        return false;
+    }
 }
