@@ -161,7 +161,7 @@ public final class Game {
             if (selected != null)
                 blockOutlineRenderer.get().render(selected.getPos().toVector3f(), view, projection);
 
-            hudCubeRenderer.get().render(20);
+            hudCubeRenderer.get().render(1);
             renderDebugHud(windowWidth, windowHeight);
 
             glfwSwapBuffers(window);

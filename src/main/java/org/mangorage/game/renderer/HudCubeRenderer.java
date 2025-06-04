@@ -40,24 +40,34 @@ public final class HudCubeRenderer {
     }
 
     public void render(float size) {
-        // Save current viewport
-
 
         int fullWidth = viewport.get(2);
         int fullHeight = viewport.get(3);
 
-        int tinyWidth = fullWidth / 6;
-        int tinyHeight = fullHeight / 6;
+        // Make viewport larger for bigger HUD cube
+        int tinyWidth = fullWidth / 4;   // Changed from /6 to /4
+        int tinyHeight = fullHeight / 4; // Changed from /6 to /4
 
-        // Set viewport to bottom-left tiny area
+        // Set viewport to bottom-left area
         glViewport(0, 0, tinyWidth, tinyHeight);
         glClear(GL_DEPTH_BUFFER_BIT);
 
+        // Create separate close-up view just for HUD to make cube appear larger
+        Matrix4f hudView = new Matrix4f()
+                .lookAt(
+                        2f, 2f, 2f,    // Very close camera for large appearance
+                        0f, 0f, 0f,
+                        0f, 1f, 0f
+                );
+
         Matrix4f model = new Matrix4f()
-                .translate(0f, 0f, 0f)
+                .translate(0.3f, -0.2f, -0.5f)        // Offset positioning
+                .rotateY((float) Math.toRadians(185))  // Your preferred rotation
+                .rotateX((float) Math.toRadians(-5))    // No X tilt
+                .rotateZ((float) Math.toRadians(0))    // No roll
                 .scale(size, size, size);
 
-        ChunkRenderer.get().render(chunkMesh, model, view, projection);
+        ChunkRenderer.get().render(chunkMesh, model, hudView, projection);
 
         // Restore full viewport
         glViewport(viewport.get(0), viewport.get(1), viewport.get(2), viewport.get(3));
@@ -70,11 +80,10 @@ public final class HudCubeRenderer {
 
         view.identity()
                 .lookAt(
-                        50f, 50f, 50f,
+                        40f, 40f, 40f,  // Main game camera stays the same
                         0f, 0f, 0f,
                         0f, 1f, 0f
                 );
         update();
     }
 }
-

@@ -76,7 +76,7 @@ public final class StairBlockRenderer extends BlockRenderer {
             if (addedVerts > 0) {
                 int texId = assetLoader.getOrCreateTexture("assets/textures/blocks/stone_block.png");
                 float[] tint = block.getTint(getTextureDirection(faceIndex), 1);
-// Brighten the RGB components
+                // Brighten the RGB components
                 tint[0] = Math.min(1.0f, tint[0] * 1.5f); // Red
                 tint[1] = Math.min(1.0f, tint[1] * 1.5f); // Green
                 tint[2] = Math.min(1.0f, tint[2] * 1.5f); // Blue
