@@ -359,7 +359,10 @@ public final class Game {
         keybindRegistry.register((key, scancode, action, mods) -> {
             if ((action == GLFW_PRESS || action == GLFW_REPEAT) && key == GLFW_KEY_M) {
                 selectedBlock = (selectedBlock + 1) % BuiltInRegistries.BLOCK_REGISTRY.getAll().size();
-                hudCubeRenderer.get().setActiveBlock(BuiltInRegistries.BLOCK_REGISTRY.getAll().get(selectedBlock));
+                var block = BuiltInRegistries.BLOCK_REGISTRY.getAll().get(selectedBlock);
+
+                hudCubeRenderer.get().setActiveBlock(block);
+                blockOutlineRenderer.get().updateOutline(block.getOutline());
                 return true;
             }
             return false;

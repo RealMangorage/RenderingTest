@@ -1,10 +1,10 @@
 {
   "textures": {
     "UP": "grass_block.png",
-    "DOWN": "dirt.png",
-    "NORTH": "dirt.png",
-    "SOUTH": "dirt.png",
-    "WEST": "dirt.png",
-    "EAST": "dirt.png"
+    "DOWN": "dirt_block.png",
+    "NORTH": "dirt_block.png",
+    "SOUTH": "dirt_block.png",
+    "WEST": "dirt_block.png",
+    "EAST": "dirt_block.png"
   }
 }

@@ -56,6 +56,26 @@ public class Block {
             },
     };
 
+    private static final float[][] DEFAULT_OUTLINE = new float[][] {
+            // Bottom face edges
+            {0, 0, 0}, {1, 0, 0},  // Bottom back edge
+            {1, 0, 0}, {1, 0, 1},  // Bottom right edge
+            {1, 0, 1}, {0, 0, 1},  // Bottom front edge
+            {0, 0, 1}, {0, 0, 0},  // Bottom left edge
+
+            // Top face edges
+            {0, 1, 0}, {1, 1, 0},  // Top back edge
+            {1, 1, 0}, {1, 1, 1},  // Top right edge
+            {1, 1, 1}, {0, 1, 1},  // Top front edge
+            {0, 1, 1}, {0, 1, 0},  // Top left edge
+
+            // Vertical edges
+            {0, 0, 0}, {0, 1, 0},  // Back left vertical
+            {1, 0, 0}, {1, 1, 0},  // Back right vertical
+            {1, 0, 1}, {1, 1, 1},  // Front right vertical
+            {0, 0, 1}, {0, 1, 1},  // Front left vertical
+    };
+
     private final InitializableSupplier<String> name = InitializableSupplier.ofAuto(() -> BuiltInRegistries.BLOCK_REGISTRY.getId(this));
     private final InitializableSupplier<BlockInfo> blockInfo = InitializableSupplier.ofAuto(() -> BlockInfo.load(getName()));
 
@@ -80,6 +100,10 @@ public class Block {
 
     public float[][][] getShape() {
         return DEFAULT_SHAPE;
+    }
+
+    public float[][] getOutline() {
+        return DEFAULT_OUTLINE;
     }
 
     public float[] getTint(Direction face, int layer) {

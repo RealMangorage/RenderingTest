@@ -15,9 +15,11 @@ public final class BuiltInRegistries {
 
     public static final Block DIAMOND_BLOCK = BLOCK_REGISTRY.register("diamond_block", new Block());
     public static final Block GRASS_BLOCK = BLOCK_REGISTRY.register("grass_block", new GrassBlock());
+    public static final Block DIRT_BLOCK = BLOCK_REGISTRY.register("dirt_block", new Block());
+    public static final Block STONE_BLOCK = BLOCK_REGISTRY.register("stone_block", new Block());
+
     public static final Block SLAB_BLOCK = BLOCK_REGISTRY.register("dirt_slab_block", new SlabBlock());
     public static final Block STAIR_BLOCK = BLOCK_REGISTRY.register("diamond_stair_block", new StairBlock());
 
-    public static void init() {
-    }
+    public static void init() {}
 }
